@@ -4,8 +4,18 @@ Quick Hilight
 
 ## task
 
-- [ ] 不要なファイルを削除し、刷新の必要なファイルを刷新する
+- [x] 不要なファイルを削除し、刷新の必要なファイルを刷新する
 - [ ] 改造
+  - [n] stage 1
+    - 報告して……それから？
+  - [ ] stage 2
+  - [ ] stage 3
+  - [ ] stage 4
+  - [ ] stage 5
+  - [ ] stage 6
+  - [ ] stage 7
+  - [ ] stage 8
+  - [ ] stage 9
 - [ ] マーケットプレイスに登録する
 
 ## requirements
@@ -21,4 +31,4 @@ Quick Hilight
 ## meta setting
 
 - development and operations model: IDAD
-- git: `https://github.com/satsuki-thyme/quick-highlight`
+- git: `https://github.com/satsuki-thyme/Quick-Highlight`
