@@ -1,0 +1,74 @@
+{
+  "executed_date_jst": "2026-10-05",
+  "git_base": "e47872ce7e05c128decac519b549b7da3a62daad",
+  "environment": {
+    "platform": "Linux",
+    "node": "v24.19.0",
+    "npm": "11.9.0"
+  },
+  "dependencies": {
+    "@types/vscode": "1.140.0",
+    "esbuild": "0.27.2",
+    "lomemo": "1.0.1",
+    "mild-map": "1.2.0",
+    "plain-object-is-empty": "2.0.1",
+    "regexp-is-intraline": "1.0.2",
+    "scex": "1.1.1",
+    "tsex": "4.0.2",
+    "typescript": "5.9.3",
+    "vscode-extras": "1.9.0"
+  },
+  "baseline": {
+    "command": "node --test --test-reporter=tap test/stage2.test.cjs",
+    "tests": 32,
+    "pass": 21,
+    "fail": 0,
+    "todo": 11,
+    "skipped": 0,
+    "exit_code": 0
+  },
+  "strict": {
+    "command": "node test/stage2.test.cjs --strict",
+    "tests": 32,
+    "pass": 21,
+    "fail": 11,
+    "todo": 0,
+    "skipped": 0,
+    "exit_code": 1
+  },
+  "known_failures": [
+    "QH-01-ranges",
+    "QH-02-shift",
+    "QH-01-move",
+    "QH-01-ascending",
+    "QH-01-descending",
+    "QH-02-decoration",
+    "QH-01-redo",
+    "QH-04-overlap",
+    "QH-03-hidden",
+    "QH-05-static-lifetime",
+    "QH-05-dynamic-lifetime"
+  ],
+  "build_checks": {
+    "typescript_noEmit": "pass",
+    "npm_run_compile": "pass with pre-existing external vscode dependency warnings",
+    "npm_run_bundle_dev": "pass"
+  },
+  "limits": [
+    "synthetic events, not captured STAGE1_EVENT_LOG.jsonl",
+    "VS Code API boundary mocked",
+    "no new Windows GUI/Extension Development Host run",
+    "language filter physical result unresolved"
+  ],
+  "sha256": {
+    "src/commands.ts": "ac5db37f4911f83c2f58b240920d7519c1dc38cfc9c0512a7a4db50bd97c3402",
+    "src/constants.ts": "fb164937c38131b2fd6750d393bfbaa39ceb4495270647cdfca77cfe32464015",
+    "src/decoration.ts": "dbe6cbe0d15b53d508bee26c7aaa8ec9dec39b45475d91730737ac3c21ffa753",
+    "src/index.ts": "1c61afd69d10724338980d8be2337d2d5f3d5f9db969c4d7a9a81395deee4f80",
+    "src/types.ts": "a768b8aa1e4d1724f21e0f9061119f0ef5aafb557eb68a2e8adf9f466fd9b881",
+    "src/utils.ts": "d18255023b8acfd269e16baa10d9fc57c2b86bc1219148f86ef224df70c367f8",
+    "package.json": "22114f3ca190ed8567619c8a2d2f15d587a74904c90c6e7a37f68755f8650e6b",
+    "test/stage2-support.cjs": "7ba5e417155d0c19c8f51f60f47a01279742ee9f813a94b74507dad3deaddc71",
+    "test/stage2.test.cjs": "efa2564cb797b292de59a45f21c5cc054524bf905712000f34ec671c8b04f770"
+  }
+}

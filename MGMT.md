@@ -6,10 +6,10 @@ Quick Hilight
 
 - [x] 不要なファイルを削除し、刷新の必要なファイルを刷新する
 - [ ] 改造
-  - [n] stage 1
-    - 報告して……それから？
-  - [ ] stage 2
-  - [ ] stage 3
+  - [x] stage 1
+  - [x] stage 2
+    - 2026-10-05: テスト基盤整備完了。32件中21合格、既知不具合11件を失敗として検出。`STAGE2_ACCEPTANCE.md`、`TESTING.md` 参照。
+  - [n] stage 3
   - [ ] stage 4
   - [ ] stage 5
   - [ ] stage 6
