@@ -9,7 +9,25 @@ import type {Change, Options} from './types';
 
 /* HELPERS */
 
-const EDITOR_REGEX_DECORATION_RANGES_CACHE = new MildMap<vscode.TextEditor, Map<RegExp, Map<vscode.TextEditorDecorationType, vscode.Range[]>>>();
+type EditorCache = {
+  document: vscode.TextDocument,
+  version: number,
+  options: Options,
+  languageId: string,
+  filePath: string,
+  theme: string,
+  highlights: Map<RegExp, Map<vscode.TextEditorDecorationType, vscode.Range[]>>
+};
+
+const EDITOR_REGEX_DECORATION_RANGES_CACHE = new MildMap<vscode.TextEditor, EditorCache>();
+
+const matchesFilter = ( regex: RegExp, value: string ): boolean => {
+
+  // Filters are predicates, even when /source/g or /source/y was configured.
+  regex.lastIndex = 0;
+  return regex.test ( value );
+
+};
 
 /* MAIN */
 
@@ -20,10 +38,17 @@ const decorateWithoutProfiler = ( editor: vscode.TextEditor, options: Options, c
   const document = editor.document;
   const theme = getConfig<string>( 'workbench.colorTheme' ) || 'Default';
 
-  const highlightsPrev = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
+  const cache = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
+  const highlightsPrev = cache?.highlights;
   const highlightsNext = new Map<RegExp, Map<vscode.TextEditorDecorationType, vscode.Range[]>>();
 
-  if ( !change && highlightsPrev ) return 0; // No changes and already decorated, nothing to do
+  const sameContext = cache?.document === document && cache.options === options && cache.languageId === document.languageId && cache.filePath === document.uri.fsPath && cache.theme === theme;
+
+  if ( sameContext && cache.version === document.version ) return 0; // Already decorated at this version
+
+  // A hidden editor can miss several changes. Only the immediately preceding
+  // document version can be updated with this transaction's old coordinates.
+  const canUpdatePrevious = sameContext && cache.version === document.version - 1;
 
   /* COMPUTING DECORATIONS */
 
@@ -37,13 +62,13 @@ const decorateWithoutProfiler = ( editor: vscode.TextEditor, options: Options, c
     /* FILTERING */
 
     if ( !isEnabled ) continue;
-    if ( languageRe && !languageRe.test ( document.languageId ) ) continue;
-    if ( fileRe && !fileRe.test ( document.uri.fsPath ) ) continue;
-    if ( themeRe && !themeRe.test ( theme ) ) continue;
+    if ( languageRe && !matchesFilter ( languageRe, document.languageId ) ) continue;
+    if ( fileRe && !matchesFilter ( fileRe, document.uri.fsPath ) ) continue;
+    if ( themeRe && !matchesFilter ( themeRe, theme ) ) continue;
 
     /* PREPARING */
 
-    const isPartial = change?.rangesNext.length && isIntraline && highlightsPrev;
+    const isPartial = change?.rangesNext.length && isIntraline && canUpdatePrevious;
 
     const highlightRanges = isPartial ? change.rangesNext : [getRangeForWholeDocument ( document )];
     const decorationsNext = highlightsNext.get ( highlightRe ) || new Map<vscode.TextEditorDecorationType, vscode.Range[]>();
@@ -164,7 +189,7 @@ const decorateWithoutProfiler = ( editor: vscode.TextEditor, options: Options, c
 
   }
 
-  EDITOR_REGEX_DECORATION_RANGES_CACHE.set ( editor, highlightsNext );
+  EDITOR_REGEX_DECORATION_RANGES_CACHE.set ( editor, { document, version: document.version, options, languageId: document.languageId, filePath: document.uri.fsPath, theme, highlights: highlightsNext } );
 
   return decorationsNr;
 
@@ -177,7 +202,11 @@ const decorateWithProfiler = ( editor: vscode.TextEditor, options: Options, chan
   const interlineNr = highlights.filter ( highlight => !highlight.isIntraline ).length;
 
   const changeLinesNr = change?.rangesNext.reduce ( ( sum, range ) => sum + getRangeLinesNr ( range ), 0 ) || 0;
-  const linesNr = interlineNr || !EDITOR_REGEX_DECORATION_RANGES_CACHE.has ( editor ) ? editor.document.lineCount : changeLinesNr;
+  const cache = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
+  const sameContext = cache?.document === editor.document && cache.options === options && cache.languageId === editor.document.languageId && cache.filePath === editor.document.uri.fsPath && cache.theme === ( getConfig<string> ( 'workbench.colorTheme' ) || 'Default' );
+  const isCurrent = sameContext && cache.version === editor.document.version;
+  const canUpdatePrevious = sameContext && cache.version === editor.document.version - 1;
+  const linesNr = isCurrent ? 0 : interlineNr || !change || !canUpdatePrevious ? editor.document.lineCount : changeLinesNr;
 
   const start = performance.now ();
 
@@ -218,7 +247,7 @@ const decorateAll = ( options: Options ): void => {
 
 const undecorate = ( editor: vscode.TextEditor ): void => {
 
-  const highlightsPrev = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
+  const highlightsPrev = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor )?.highlights;
 
   if ( !highlightsPrev ) return;
 
@@ -246,6 +275,14 @@ const undecorateAll = (): void => {
 
 };
 
+const undecorateDocument = ( document: vscode.TextDocument ): void => {
+
+  for ( const [editor, cache] of EDITOR_REGEX_DECORATION_RANGES_CACHE ) {
+    if ( cache.document === document ) undecorate ( editor );
+  }
+
+};
+
 /* EXPORT */
 
-export {decorate, decorateAll, undecorate, undecorateAll};
+export {decorate, decorateAll, undecorate, undecorateAll, undecorateDocument};

@@ -1,0 +1,126 @@
+{
+  "stage": 4,
+  "date_jst": "2026-10-08",
+  "status": "implementation_and_automated_checks_complete__windows_pending",
+  "environment": {
+    "platform": "Linux",
+    "node": "v24.19.0",
+    "npm": "11.9.0",
+    "dependencies": {
+      "typescript": "5.9.3",
+      "esbuild": "0.27.2",
+      "tsex": "4.0.2",
+      "mild-map": "1.2.0",
+      "regexp-is-intraline": "1.0.2",
+      "vscode-extras": "1.9.0",
+      "@types/vscode": "1.140.0"
+    }
+  },
+  "baseline": {
+    "tests": 44,
+    "pass": 42,
+    "todo": 2,
+    "fail": 0,
+    "log_sha256": "ff696bb8ce875348a413c8873be1090b700e8cfe2c78bac0671937e776b08940"
+  },
+  "additional_tests_against_stage3": {
+    "tests": 22,
+    "pass": 4,
+    "fail": 18,
+    "exit_code": 1,
+    "product": "unchanged_stage3",
+    "boundary": "same_current_test_boundary"
+  },
+  "final_tests": {
+    "tests": 66,
+    "pass": 66,
+    "fail": 0,
+    "todo": 0,
+    "skip": 0,
+    "exit_code": 0,
+    "log_sha256": "9928b5ba41333b92f2870112d542c6d93d959439f79f7d6a2ef34c0f917d65d6"
+  },
+  "stage2_strict": {
+    "tests": 32,
+    "pass": 32,
+    "fail": 0,
+    "exit_code": 0
+  },
+  "checks": {
+    "tsc_no_emit": 0,
+    "tsc_product_and_dev_entry": 0,
+    "npm_compile": 0,
+    "npm_bundle_dev": 0,
+    "test_fixture_preparation": 0,
+    "test_helper_node_check": 0,
+    "product_bundle_has_no_test_command_or_log": true
+  },
+  "compile_note": "tsex reports Unknown dependency vscode; external VS Code host API is intentionally not installed as a runtime npm module.",
+  "observations": {
+    "ordinary_edit_read_lines_after_rebuild": 1,
+    "static_replacements": 30,
+    "max_live_static_types": 1,
+    "dynamic_remove_restore_cycles": 20,
+    "live_dynamic_types_after_removal": 0,
+    "theme_round_trips": 10,
+    "after_shutdown_live_types": 0,
+    "unrelated_configuration_reads_and_allocations": 0
+  },
+  "source_sha256_before": {
+    ".gitignore": "d34088102d663535a3efc502053bfefed6978d597a8d7fd40594ee0d38a46ee4",
+    ".vscodeignore": "9a91707c21467a4afb9212393cd4c96b04ee3482f30028dc3d424a6aceda24fe",
+    "MGMT.md": "6e51e82b39a892ab01fde7bcf6f7047c1faf47aed52583609d8375765d0fe2e8",
+    "PROCESS_CHART.md": "eb37f5bec220012966426cfa7362750c295a09681fffae10d5214eddeadb3fec",
+    "README.md": "cf815fd746f207a2469833558587c0c86032ce1a4374f85edeee7779db17fd27",
+    "TESTING.md": "477b7c00483d486d64305f00dc0c90389e16894eb968ed6666b5d5ff2dc9917d",
+    "changelog.md": "23f48c2c5f555fca84cb8438192d86c49195c7b9436099f2278777ce1471090e",
+    "src/decoration.ts": "6f6476ec20fa89ac069266094e5742160c4a37bcd01ad3fe29b145dc5834d98b",
+    "src/index.ts": "1c61afd69d10724338980d8be2337d2d5f3d5f9db969c4d7a9a81395deee4f80",
+    "src/types.ts": "a768b8aa1e4d1724f21e0f9061119f0ef5aafb557eb68a2e8adf9f466fd9b881",
+    "src/utils.ts": "59bfa3cf4dc38ed1cbb8d112d27a4b22a9f26ead6f4b1e785bb21694b5f9f021",
+    "test/stage2-support.cjs": "7ba5e417155d0c19c8f51f60f47a01279742ee9f813a94b74507dad3deaddc71",
+    "test/stage2.test.cjs": "19b9efb2e1eb8493fa65a852aa6559dffdd695cfe977cef6852addf162661691",
+    "tsconfig.json": "c50faaaaf978bbf0fdd519fb843e370cb1acb9a17fff714a8ccf5fd9029bc939"
+  },
+  "source_sha256_after": {
+    ".gitignore": "ceedf60a18d42686f8b5ab46187c37891184cfcd7ba886fb5bdd4b6c41fc46ac",
+    ".vscodeignore": "38c4aaad529cad1ef724e5a717f13e115203d3407bd0602ac40e9ff4812da2d8",
+    "MGMT.md": "9ca1c6ca24ca264d03fec294b1ba6a787b54270ab2a50af6ba3a1f0d922c4278",
+    "PROCESS_CHART.md": "51f1cc84d4dc4b1185429dc2300eb1ed66d13397aa956265c867eeeb0bd0f3d4",
+    "README.md": "bf1db2e20cb827911ed3890348b80778dbb5e16c426d8cacb22c13e72e8bcda9",
+    "TESTING.md": "48002d0334e3b6f60496ea9444a953d2b5c1cdbb62e6f4e09c07ac160022617a",
+    "changelog.md": "05d6c9362cb6516577aa0da8105f973fed7e13cfa3c275498d592f2bd600e8c5",
+    "src/decoration.ts": "f7dda3e7ce69038ae7357719d6212834bbaf50eba8470a8c1ad8ed16ddeaf5a9",
+    "src/index.ts": "a677624de9974b4cda79057d67cb7bf712cd2f08679fc4886a3c1eebb80c408e",
+    "src/types.ts": "ad18c8ce6b2a53108501f3a504000929a4348d63af203caacc29f4745dc0599e",
+    "src/utils.ts": "302c0333a2dbdb62db1289c5fc21ad080f249ff088a5a2957612b5bd545de4a2",
+    "test/stage2-support.cjs": "d141a0133e8e30f2e8bf2610b0ee7409eeb952f46e7e149f888c7fb4233e0d3d",
+    "test/stage2.test.cjs": "898d67d8696fdece080d4fba157493fa2852a1933b8ec2d06fbc2e34d276340a",
+    "tsconfig.json": "3f5c6b3804dc79b6bf82425131aa7eccdb4a5d654165fd99b4379e5377a6c89e",
+    "STAGE4_LAUNCH_TEST_WIN.ps1": "ca6816b43d8b308184c533ec6c137ac210f223e45c76e33fa79c3ad2b6f0c6a9",
+    "STAGE4_PHYSICAL_DEVICE_CHECK.md": "d82bf0c1b9f54f03fb191cbebcd6568d43120d8231704e89649a49a71bca281e",
+    "src/decoration-types.ts": "dfea5898d4315be6ead0ecf5d65c710d2d86ac0e709624e889fa6678818327d3",
+    "test/stage4-dev-entry.ts": "26f29c65bdc81158932cecff9619cf2bc31243d6ee7eedcfd278700163cc8cbb",
+    "test/stage4-prepare.cjs": "0d833ad66a431b6761489001f603057a35e59c5e55ad7b53f70a09d7fcc0023c",
+    "test/stage4.test.cjs": "3ba06c34b201efb86fc0f0b2e78ad5bedb729902b14c985e8d8f6d0b1dcca80e"
+  },
+  "bundle_sha256": "f5e590154233d01ba661c913355b0d1da11e192b329a907453206a7a643b997d",
+  "preserved": {
+    "package.json": "22114f3ca190ed8567619c8a2d2f15d587a74904c90c6e7a37f68755f8650e6b",
+    "test/stage3.test.cjs": "fc2c28b3a38026e384699d8bef7a1e2d2b8b542afde8d11d59593a387ac89acd",
+    "STAGE3_RESULTS.json": "54f55936570f0f80e591d3f6c20ea2088828cbd2e1fc6468fe502afb09dd0b88",
+    "STAGE3_PHYSICAL_DEVICE_CHECK.md": "fb3cd637eefb9991062ab73c8455fe4bde481ff0622014355ac986b46dfe6b1b"
+  },
+  "not_verified": [
+    "Windows PowerShell launch",
+    "actual VS Code Extension Development Host activation and UI",
+    "original stage1 language-filter report 4-7",
+    "long-running dynamic-style cache and actual host memory/UI latency"
+  ],
+  "git": {
+    "branch": "master",
+    "head_read_from_dropbox": "655b5591f8945cf60b6182a40e7ee37b2c008490",
+    "index_diff_inspected": true,
+    "commit_push_publish": false
+  }
+}

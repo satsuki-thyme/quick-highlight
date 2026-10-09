@@ -1,3 +1,18 @@
+### Quick Highlight — Unreleased (2026-10-08, stage 4)
+- Own decoration types per configuration generation and dispose obsolete static/dynamic types on reload and shutdown.
+- Reapply settings, flags and filters to visible editors; invalidate caches when language, theme or options change.
+- Recover from invalid regex settings without clearing the last valid view or requiring a restart.
+- Escape dynamic capture text safely and reset stateful filter regexes before each evaluation.
+- Dispose command/event subscriptions; preserve stage 3 intraline editing behavior.
+- All 66 automated tests pass. Windows visual verification is pending; see STAGE4_PHYSICAL_DEVICE_CHECK.md.
+
+### Quick Highlight — Unreleased (2026-10-05, stage 3)
+- Fixed final-document rescan coordinates for multiple edits, including paste, move and redo.
+- Accumulated line shifts from edits on the same old line and merged overlapping scan ranges.
+- Invalidated stale editor decoration caches using document identity and version.
+- Preserved intraline partial updates and interline full scans; added regression coverage.
+- Stage 3 Windows checks were confirmed by the user on 2026-10-05; see STAGE3_COMPLETION.md.
+
 ### Version 2.1.0
 - New highlight setting: "filterThemeRegex" to apply the decoration only when the name of the current theme matches this regex
 - Added support for referencing vscode theme colors, prefixed with `theme.`

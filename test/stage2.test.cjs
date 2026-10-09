@@ -6,24 +6,6 @@ const {
   createHarness, defaultConfig, Document, Position, Range, coords, snapshot, fullSnapshot
 } = require('./stage2-support.cjs');
 
-const strict = process.argv.includes('--strict');
-// Only the specifically tagged assertion is an expected failure. Loading errors,
-// unrelated assertions and unexpected passes all fail the baseline command.
-function known(id, name, fn) {
-  test(`${id}: ${name}`, t => {
-    if (strict) return fn(`[${id}]`);
-    try {
-      fn(`[${id}]`);
-    } catch (error) {
-      if (error.code === 'ERR_ASSERTION' && error.message.startsWith(`[${id}]`)) {
-        t.todo('Known product defect; run with --strict to enforce the acceptance assertion');
-      }
-      throw error;
-    }
-    assert.fail(`${id} unexpectedly passed: verify the fix and promote this case to a normal test`);
-  });
-}
-
 function started(text, config = defaultConfig(), language, fsPath) {
   const h = createHarness(config);
   const doc = new Document(text, language, fsPath);
@@ -72,18 +54,18 @@ test('line counting supports LF, CRLF and CR; no-op changes have no shift map', 
   assert.equal(h.api.getChange([insert(0, 0, 'x')]).shifts, undefined);
 });
 
-known('QH-01-ranges', 'multiple insertions use final-document rescan coordinates', message => {
+test('QH-01-ranges: multiple insertions use final-document rescan coordinates', () => {
   const h = createHarness();
   const changes = [insert(1, 0, 'X\n'), insert(3, 0, 'Y\n')];
   assert.deepEqual(Array.from(h.api.getChangeRangesNext(changes), coords), [
     [1, 0, 2, Infinity], [4, 0, 5, Infinity]
-  ], message);
+  ]);
 });
 
-known('QH-02-shift', 'two newline insertions on the same old line accumulate', message => {
+test('QH-02-shift: two newline insertions on the same old line accumulate', () => {
   const h = createHarness();
   const change = h.api.getChange([insert(0, 1, '\n'), insert(0, 3, '\n')]);
-  assert.deepEqual(coords(h.api.getRangeShifted(new Range(1, 0, 1, 6), change.shifts)), [3, 0, 3, 6], message);
+  assert.deepEqual(coords(h.api.getRangeShifted(new Range(1, 0, 1, 6), change.shifts)), [3, 0, 3, 6]);
 });
 
 for (const eol of ['\n', '\r\n']) {
@@ -116,29 +98,29 @@ test('single deletion of complete lines shifts surviving ranges correctly', () =
   sameAsFull(h, doc, editor);
 });
 
-known('QH-01-move', 'line move expressed as delete plus insert matches full recomputation', message => {
+test('QH-01-move: line move expressed as delete plus insert matches full recomputation', () => {
   const { h, doc, editor } = started('A QH_RED\nB QH_RED\nC QH_RED\nD QH_RED');
   h.edit(doc, [
     { range: new Range(1, 0, 2, 0), text: '' },
     insert(3, 0, 'B QH_RED\n')
   ]);
   assert.equal(doc.text, 'A QH_RED\nC QH_RED\nB QH_RED\nD QH_RED');
-  sameAsFull(h, doc, editor, message);
+  sameAsFull(h, doc, editor);
 });
 
 for (const order of ['ascending', 'descending']) {
-  known(`QH-01-${order}`, `multicursor multiline paste (${order} event order) matches full recomputation`, message => {
+  test(`QH-01-${order}: multicursor multiline paste (${order} event order) matches full recomputation`, () => {
     const { h, doc, editor } = started(multiText);
     h.edit(doc, multiEdits(), { order });
     assert.equal(doc.text, 'MULTI_A QH_RED\nINSERTED QH_RED\nMULTI_B QH_RED\nINSERTED QH_RED\nMULTI_C QH_RED\nINSERTED QH_RED\nAFTER_MULTI QH_RED');
-    sameAsFull(h, doc, editor, message);
+    sameAsFull(h, doc, editor);
   });
 }
 
-known('QH-02-decoration', 'same-line multicursor newlines preserve the lower highlight', message => {
+test('QH-02-decoration: same-line multicursor newlines preserve the lower highlight', () => {
   const { h, doc, editor } = started('LEFT QH_RED | RIGHT QH_RED\nAFTER_SAME_LINE QH_RED');
   h.edit(doc, [insert(0, 11, '\n'), insert(0, 14, '\n')]);
-  sameAsFull(h, doc, editor, message);
+  sameAsFull(h, doc, editor);
 });
 
 test('Undo of multiline multicursor insertion matches full recomputation from a clean final state', () => {
@@ -151,16 +133,16 @@ test('Undo of multiline multicursor insertion matches full recomputation from a 
   sameAsFull(h, doc, editor);
 });
 
-known('QH-01-redo', 'Redo carries the same acceptance requirement as the original transaction', message => {
+test('QH-01-redo: Redo carries the same acceptance requirement as the original transaction', () => {
   const { h, doc, editor } = started(multiText);
   h.edit(doc, multiEdits(), { reason: 2 });
-  sameAsFull(h, doc, editor, message);
+  sameAsFull(h, doc, editor);
 });
 
-known('QH-04-overlap', 'two edits on one line do not emit duplicate decoration ranges', message => {
+test('QH-04-overlap: two edits on one line do not emit duplicate decoration ranges', () => {
   const { h, doc, editor } = started('LEFT QH_RED RIGHT\nTAIL QH_RED');
   h.edit(doc, [insert(0, 1, 'x'), insert(0, 15, 'y')]);
-  sameAsFull(h, doc, editor, message);
+  sameAsFull(h, doc, editor);
 });
 
 test('both visible editors receive consistent decoration updates', () => {
@@ -171,14 +153,14 @@ test('both visible editors receive consistent decoration updates', () => {
   assert.deepEqual(snapshot(right), snapshot(editor));
 });
 
-known('QH-03-hidden', 'an existing editor refreshes after its document changed while hidden', message => {
+test('QH-03-hidden: an existing editor refreshes after its document changed while hidden', () => {
   const { h, doc, editor } = started('A QH_RED\nB');
   const right = h.editor(doc); h.show([editor, right]);
   h.show([editor]);
   h.edit(doc, [insert(1, 1, ' QH_RED')]);
   sameAsFull(h, doc, editor);
   h.show([editor, right]);
-  assert.deepEqual(snapshot(right), snapshot(editor), message);
+  assert.deepEqual(snapshot(right), snapshot(editor));
 });
 
 test('intraline edit reads only the changed line', () => {
@@ -288,20 +270,20 @@ test('non-global regex initially matches once and inline flags override fallback
   assert.deepEqual(snapshot(editor)[0].ranges, [[0, 7, 0, 13]]);
 });
 
-known('QH-05-static-lifetime', 'removed static DecorationTypes are disposed during config rebuild', message => {
+test('QH-05-static-lifetime: removed static DecorationTypes are disposed during config rebuild', () => {
   const { h, editor } = started('QH_RED');
   const oldType = h.state.types[0];
   const config = defaultConfig(); config.regexes = {};
   h.changeConfig(config);
   assert.deepEqual(snapshot(editor), []);
-  assert.equal(oldType.disposed, true, message);
+  assert.equal(oldType.disposed, true);
 });
 
-known('QH-05-dynamic-lifetime', 'removing a dynamic rule disposes all generated DecorationTypes', message => {
+test('QH-05-dynamic-lifetime: removing a dynamic rule disposes all generated DecorationTypes', () => {
   const config = defaultConfig(); config.regexes = { '(#[0-9a-f]{6})': [{ backgroundColor: '$1' }] };
   const { h, editor } = started('#ff0000 #00ff00 #0000ff', config);
   assert.equal(h.state.types.length, 3);
   config.regexes = {}; h.changeConfig(config);
   assert.deepEqual(snapshot(editor), []);
-  assert.equal(h.state.types.filter(type => !type.disposed).length, 0, message);
+  assert.equal(h.state.types.filter(type => !type.disposed).length, 0);
 });

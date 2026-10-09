@@ -13,3 +13,6 @@ Thumbs.db
 dist
 node_modules
 package-lock.json
+
+# Renamed originals retained by the required file update procedure
+*.backup-*

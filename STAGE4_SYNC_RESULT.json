@@ -1,0 +1,387 @@
+{
+  "project": "Quick Highlight",
+  "stage": 4,
+  "date_jst": "2026-10-08",
+  "status": "source_and_documents_reflected_and_verified__windows_confirmation_pending",
+  "verified_at_utc": "2026-10-08T06:27:50.612Z",
+  "project_directory": "/www/studio/Quick-Highlight",
+  "summary": {
+    "updated_existing_files": 14,
+    "new_artifacts_excluding_this_record": 9,
+    "verified_artifacts": 23,
+    "verified_original_backups": 14,
+    "this_record_is_additional_new_file": true,
+    "total_written_files_including_this_record": 24
+  },
+  "verification": {
+    "method": "Dropbox content_hash (SHA-256 of concatenated SHA-256 digests of 4 MiB blocks), size and case-insensitive destination path compared with locally verified candidates; all matched.",
+    "backup_method": "Original files renamed within the same directory before creating updated contents at the original path. No copying originals, direct overwrites or deletions.",
+    "stage4_tests": {
+      "pass": 66,
+      "fail": 0,
+      "todo": 0,
+      "skip": 0
+    },
+    "type_checks": "passed",
+    "compile_and_bundle": "passed",
+    "windows_ui": "not_run__user_confirmation_required"
+  },
+  "artifacts": [
+    {
+      "relative_path": ".gitignore",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/.gitignore",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwLA",
+      "size": 218,
+      "sha256": "ceedf60a18d42686f8b5ab46187c37891184cfcd7ba886fb5bdd4b6c41fc46ac",
+      "dropbox_content_hash": "eacf4b6a44fd98eae011a1bf2e0e557c54d7f718053148b4318062fb6c9c353f",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/.gitignore.backup-2026-10-08-01",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZCA",
+        "size": 139,
+        "sha256": "d34088102d663535a3efc502053bfefed6978d597a8d7fd40594ee0d38a46ee4",
+        "dropbox_content_hash": "99eca70efff35c5e0d96c6e5537cf297183678e8b3b21e2483650bcece1cd2a1",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": ".vscodeignore",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/.vscodeignore",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwLQ",
+      "size": 220,
+      "sha256": "38c4aaad529cad1ef724e5a717f13e115203d3407bd0602ac40e9ff4812da2d8",
+      "dropbox_content_hash": "d73988db98380620f21f7981f27991b72cc5800b5440c09d84fb8b8f240afc43",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/.vscodeignore.backup-2026-10-08-01",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZBQ",
+        "size": 122,
+        "sha256": "9a91707c21467a4afb9212393cd4c96b04ee3482f30028dc3d424a6aceda24fe",
+        "dropbox_content_hash": "6f8b3a6ad57d3df05a4c4d184cf4274f8a3f8c1ed753ec816926b585f03591c8",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "MGMT.md",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/MGMT.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwaw",
+      "size": 1943,
+      "sha256": "9ca1c6ca24ca264d03fec294b1ba6a787b54270ab2a50af6ba3a1f0d922c4278",
+      "dropbox_content_hash": "49c5f709d539ca8f5d5c216c1688c43ece6f863697ca39fddf669f6636413f44",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/MGMT.backup-2026-10-08-01.md",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKY3g",
+        "size": 1528,
+        "sha256": "6e51e82b39a892ab01fde7bcf6f7047c1faf47aed52583609d8375765d0fe2e8",
+        "dropbox_content_hash": "42d05486f9300269cc9234061b3b5dffd9aee78f4ffe17afe45c3949c39f867d",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "PROCESS_CHART.md",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/PROCESS_CHART.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwbA",
+      "size": 22766,
+      "sha256": "51f1cc84d4dc4b1185429dc2300eb1ed66d13397aa956265c867eeeb0bd0f3d4",
+      "dropbox_content_hash": "0fbcf767b3671669aa14eb13027ee078332e2dc7f2f4dadaefeec21dfd4d91ff",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/PROCESS_CHART.backup-2026-10-08-01.md",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZXw",
+        "size": 22829,
+        "sha256": "eb37f5bec220012966426cfa7362750c295a09681fffae10d5214eddeadb3fec",
+        "dropbox_content_hash": "18719909be1d97883fd6974f3a1748a825d5a85030c7eb2f768ed92b8a81c244",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "README.md",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/README.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwNQ",
+      "size": 13165,
+      "sha256": "bf1db2e20cb827911ed3890348b80778dbb5e16c426d8cacb22c13e72e8bcda9",
+      "dropbox_content_hash": "046179003c9d74bb5a9c9e8e1a0f247202aacc1b1e0547282f15bb4620ddf969",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/README.backup-2026-10-08-01.md",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZBg",
+        "size": 12369,
+        "sha256": "cf815fd746f207a2469833558587c0c86032ce1a4374f85edeee7779db17fd27",
+        "dropbox_content_hash": "a19cfd2fc51bda6b4e39dab6d653fcbf95201dd0d5efd3f0ccb735eb42ce1155",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "TESTING.md",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/TESTING.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwOA",
+      "size": 10150,
+      "sha256": "48002d0334e3b6f60496ea9444a953d2b5c1cdbb62e6f4e09c07ac160022617a",
+      "dropbox_content_hash": "70a77b5cd9add285ad25c819cbf576ddcfb515dc1db4a328c4b577ee43bdb822",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/TESTING.backup-2026-10-08-01.md",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKrYQ",
+        "size": 8497,
+        "sha256": "477b7c00483d486d64305f00dc0c90389e16894eb968ed6666b5d5ff2dc9917d",
+        "dropbox_content_hash": "152183797d51bd5cf19f74c033fcb91ada96ee57cbd544713e4f14b21f84660f",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "changelog.md",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/changelog.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwNg",
+      "size": 5782,
+      "sha256": "05d6c9362cb6516577aa0da8105f973fed7e13cfa3c275498d592f2bd600e8c5",
+      "dropbox_content_hash": "58afffdee90dc9a1a4091234ca9e01092b179d13aea161725a5cc30c882c69f5",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/changelog.backup-2026-10-08-01.md",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKrrA",
+        "size": 5108,
+        "sha256": "23f48c2c5f555fca84cb8438192d86c49195c7b9436099f2278777ce1471090e",
+        "dropbox_content_hash": "c0a3e740772e36c704644b88ed2448490c0ac290a702a38a49f6303595ac5932",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "src/decoration.ts",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/src/decoration.ts",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwLw",
+      "size": 8821,
+      "sha256": "f7dda3e7ce69038ae7357719d6212834bbaf50eba8470a8c1ad8ed16ddeaf5a9",
+      "dropbox_content_hash": "31137660198c569f935c961c241205aa9085a3aeb2a4404354e08c65242e2afb",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/src/decoration.backup-2026-10-08-01.ts",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZJg",
+        "size": 7807,
+        "sha256": "6f6476ec20fa89ac069266094e5742160c4a37bcd01ad3fe29b145dc5834d98b",
+        "dropbox_content_hash": "07875a085ed9e43cc961286acd05b6159b7b7d92d3e25261b575377c92439e89",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "src/index.ts",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/src/index.ts",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwMg",
+      "size": 2773,
+      "sha256": "a677624de9974b4cda79057d67cb7bf712cd2f08679fc4886a3c1eebb80c408e",
+      "dropbox_content_hash": "d841692d345d64f937e68849e36b8eaad70ecf46d264e05b948c3a0e38087917",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/src/index.backup-2026-10-08-01.ts",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZKA",
+        "size": 1833,
+        "sha256": "1c61afd69d10724338980d8be2337d2d5f3d5f9db969c4d7a9a81395deee4f80",
+        "dropbox_content_hash": "e2f7471048ae3f8694c447d94c462159594468ecb08ea6a07bc98cae64805ae2",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "src/types.ts",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/src/types.ts",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwLg",
+      "size": 750,
+      "sha256": "ad18c8ce6b2a53108501f3a504000929a4348d63af203caacc29f4745dc0599e",
+      "dropbox_content_hash": "2082aa7cff80958d975a478fc24374ed13eec6d53ac7f17356f1af116ff32fbe",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/src/types.backup-2026-10-08-01.ts",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZKQ",
+        "size": 727,
+        "sha256": "a768b8aa1e4d1724f21e0f9061119f0ef5aafb557eb68a2e8adf9f466fd9b881",
+        "dropbox_content_hash": "7fbeb5c67d84d7bc772af4bf0f6e8d353349cc6e09e214ccaa0ae2450b2b3991",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "src/utils.ts",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/src/utils.ts",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwMQ",
+      "size": 9741,
+      "sha256": "302c0333a2dbdb62db1289c5fc21ad080f249ff088a5a2957612b5bd545de4a2",
+      "dropbox_content_hash": "242bfc34bf0f589596206137978370d9528470bfaac7753c39576c4275dbdef0",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/src/utils.backup-2026-10-08-01.ts",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZJw",
+        "size": 11926,
+        "sha256": "59bfa3cf4dc38ed1cbb8d112d27a4b22a9f26ead6f4b1e785bb21694b5f9f021",
+        "dropbox_content_hash": "18d6cee244ec225113e4f4b4691ae55eda917d976a445ab0e0396c08dbe4ca71",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "test/stage2-support.cjs",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/test/stage2-support.cjs",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwMw",
+      "size": 9661,
+      "sha256": "d141a0133e8e30f2e8bf2610b0ee7409eeb952f46e7e149f888c7fb4233e0d3d",
+      "dropbox_content_hash": "9496a57fe7d2b74c940fb02dd7fdb6725dde2e54963535b2bc13c6491d237179",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/test/stage2-support.backup-2026-10-08-01.cjs",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKrXw",
+        "size": 9591,
+        "sha256": "7ba5e417155d0c19c8f51f60f47a01279742ee9f813a94b74507dad3deaddc71",
+        "dropbox_content_hash": "49e201a5f3a3f145a70795842237ed86cf324948f2fec189fdb5ca92173d5f52",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "test/stage2.test.cjs",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/test/stage2.test.cjs",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwNA",
+      "size": 13407,
+      "sha256": "898d67d8696fdece080d4fba157493fa2852a1933b8ec2d06fbc2e34d276340a",
+      "dropbox_content_hash": "3ea1b4c4a5254409e726c813ee75aea050b8c27c4da30d6b6ba4e2cb5a70a675",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/test/stage2.test.backup-2026-10-08-01.cjs",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKrYA",
+        "size": 14125,
+        "sha256": "19b9efb2e1eb8493fa65a852aa6559dffdd695cfe977cef6852addf162661691",
+        "dropbox_content_hash": "89c8aec3c313d0179db25e93f71b3a92234f0b95c2f68c3519558a8670081abf",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "tsconfig.json",
+      "action": "updated_after_original_rename",
+      "path_display": "/www/studio/Quick-Highlight/tsconfig.json",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwKw",
+      "size": 194,
+      "sha256": "3f5c6b3804dc79b6bf82425131aa7eccdb4a5d654165fd99b4379e5377a6c89e",
+      "dropbox_content_hash": "edd1e95c5a15b5037fb8266384c6edf861d0eb74e9c818f8293ac6f486e3ef88",
+      "verified": true,
+      "original_backup": {
+        "path_display": "/www/studio/Quick-Highlight/tsconfig.backup-2026-10-08-01.json",
+        "file_id": "id:pdXqx4wRBdMAAAAAAAKZGw",
+        "size": 122,
+        "sha256": "c50faaaaf978bbf0fdd519fb843e370cb1acb9a17fff714a8ccf5fd9029bc939",
+        "dropbox_content_hash": "a6ab1a4c82ce55bdbe2cec21f983b9e159a8a52cd06921ce1100b2ae28f1772b",
+        "verified": true
+      }
+    },
+    {
+      "relative_path": "STAGE4_LAUNCH_TEST_WIN.ps1",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/STAGE4_LAUNCH_TEST_WIN.ps1",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwIw",
+      "size": 1419,
+      "sha256": "ca6816b43d8b308184c533ec6c137ac210f223e45c76e33fa79c3ad2b6f0c6a9",
+      "dropbox_content_hash": "6a02ad82b81cad96771898f821c94b4ca1a4143e2273f10e973700d9c8728cc7",
+      "verified": true
+    },
+    {
+      "relative_path": "STAGE4_PHYSICAL_DEVICE_CHECK.md",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/STAGE4_PHYSICAL_DEVICE_CHECK.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwJA",
+      "size": 3934,
+      "sha256": "d82bf0c1b9f54f03fb191cbebcd6568d43120d8231704e89649a49a71bca281e",
+      "dropbox_content_hash": "d6c3b1fdae527674b7b2eb4ace3116534f110009c7515d97e6a18390927aff16",
+      "verified": true
+    },
+    {
+      "relative_path": "src/decoration-types.ts",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/src/decoration-types.ts",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwIg",
+      "size": 2430,
+      "sha256": "dfea5898d4315be6ead0ecf5d65c710d2d86ac0e709624e889fa6678818327d3",
+      "dropbox_content_hash": "0d0875109a63216cb7892d6e83ecb82227b96c24a8c2c764fd8da088c8fe6a9e",
+      "verified": true
+    },
+    {
+      "relative_path": "test/stage4-dev-entry.ts",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/test/stage4-dev-entry.ts",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwJQ",
+      "size": 4821,
+      "sha256": "26f29c65bdc81158932cecff9619cf2bc31243d6ee7eedcfd278700163cc8cbb",
+      "dropbox_content_hash": "cb1161c73cef4b2eb5c249309389dff1515dca23c8df7f04f33823e280e403c9",
+      "verified": true
+    },
+    {
+      "relative_path": "test/stage4-prepare.cjs",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/test/stage4-prepare.cjs",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwJg",
+      "size": 3212,
+      "sha256": "0d833ad66a431b6761489001f603057a35e59c5e55ad7b53f70a09d7fcc0023c",
+      "dropbox_content_hash": "c921bfb5f64af045e0f86efb69527e7961cb2512f99bd7e89f79d01375cf38cc",
+      "verified": true
+    },
+    {
+      "relative_path": "test/stage4.test.cjs",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/test/stage4.test.cjs",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwJw",
+      "size": 12512,
+      "sha256": "3ba06c34b201efb86fc0f0b2e78ad5bedb729902b14c985e8d8f6d0b1dcca80e",
+      "dropbox_content_hash": "d22225fe41323d47a5fec1c9d295b45d2ffe3a9b057831dd53d14c564ac3ca0e",
+      "verified": true
+    },
+    {
+      "relative_path": "STAGE4_ACCEPTANCE.md",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/STAGE4_ACCEPTANCE.md",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwKA",
+      "size": 9012,
+      "sha256": "a8f6902d022e75bead87bc9d44e496f0871e411678a5b88ceeff07571072af37",
+      "dropbox_content_hash": "e2edc718a9715ad5acdd66d9d8047f4c0356329fc36421c7a267361b26fa4964",
+      "verified": true
+    },
+    {
+      "relative_path": "STAGE4_RESULTS.json",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/STAGE4_RESULTS.json",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwKQ",
+      "size": 5933,
+      "sha256": "f777e990ebe82cdcd46491e9f0b7e00346d13e13cc48f29b7a1730b0c9ebdea8",
+      "dropbox_content_hash": "3ed4cc6939640ec348c04bb968a3cdeb02862d02a4f885e27906d54c17b522e9",
+      "verified": true
+    },
+    {
+      "relative_path": "STAGE4_EVIDENCE.zip",
+      "action": "created",
+      "path_display": "/www/studio/Quick-Highlight/STAGE4_EVIDENCE.zip",
+      "file_id": "id:pdXqx4wRBdMAAAAAAAKwKg",
+      "size": 10929,
+      "sha256": "0b94b223f9a4f75d9de52526552d0e390d757ce14dc389a23dd4d7c92d87309f",
+      "dropbox_content_hash": "2f92bac9dbf6fb55f6e9bf2425da47cd9e2d5f99c68d5ea15f05b675f9ada087",
+      "verified": true
+    }
+  ],
+  "git": {
+    "commit": false,
+    "push": false,
+    "marketplace_publish": false
+  },
+  "remaining_gate": {
+    "document": "STAGE4_PHYSICAL_DEVICE_CHECK.md",
+    "steps": 12,
+    "launch": "powershell -ExecutionPolicy Bypass -File .\\STAGE4_LAUNCH_TEST_WIN.ps1",
+    "all_pass_reply": "工程4は全部ok",
+    "original_stage1_language_filter_4_7": "unconfirmed_until_actual_steps_3_and_4_pass"
+  },
+  "revert_guidance_ja": "戻す場合は、更新版を別名へ退避した後、original_backup.path_display の原本を同じ記録の path_display へ改名する。新規追加ファイルも必要に応じて別名へ退避する。復旧前後の内容を照合し、確認前に削除しない。",
+  "record_note": "This synchronization record is added after verification of the 23 listed artifacts and 14 originals; it does not contain its own content hash."
+}

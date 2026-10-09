@@ -35,7 +35,8 @@ type Highlight = {
 type Options = {
   debugging: boolean,
   enabled: boolean,
-  highlights: Highlight[]
+  highlights: Highlight[],
+  dispose: () => void
 };
 
 /* EXPORT */

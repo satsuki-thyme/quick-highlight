@@ -30,6 +30,14 @@ It adds 3 commands to the command palette:
 
 ## Settings
 
+### Quick Highlight: configuration updates (unreleased)
+
+Changes to `highlight.*` settings and the selected theme are reapplied to visible editors without restarting VS Code. Obsolete decoration types are disposed, including types created by dynamic `$0`, `$1`, etc. styles. Changing a document's language also refreshes its filters.
+
+If a regular expression or its flags are invalid, Quick Highlight reports the error and keeps the last valid configuration active. Correct and save the settings to recover. If the initial configuration is invalid, highlighting begins after it is corrected. Disabling highlighting still works while a rule is invalid.
+
+Stage 4 Windows verification is pending; see `STAGE4_PHYSICAL_DEVICE_CHECK.md`. Existing `highlight.*` settings and command IDs are retained.
+
 ```js
 {
   "highlight.decorations": { "rangeBehavior": 3 }, // Default decorations from which all others inherit from

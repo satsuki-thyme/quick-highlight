@@ -1,0 +1,928 @@
+diff --git a/src/utils.ts b/src/utils.ts
+--- a/src/utils.ts
++++ b/src/utils.ts
+@@ -23,23 +23,56 @@
+ 
+ const getChangeRangesPrev = ( changes: readonly vscode.TextDocumentContentChangeEvent[] ): vscode.Range[] => {
+ 
+-  return changes.map ( change => getRangeForWholeLines ( change.range ) );
++  return getWholeLineRangesMerged ( changes.map ( change => getRangeForWholeLines ( change.range ) ) );
+ 
+ };
+ 
+ const getChangeRangesNext = ( changes: readonly vscode.TextDocumentContentChangeEvent[] ): vscode.Range[] => {
+ 
+-  return changes.map ( change => {
++  // All ranges describe the old document. Earlier edits move the lines scanned
++  // in the final document, regardless of the order in contentChanges.
++  const sorted = [...changes].sort ( ( a, b ) => a.range.start.compareTo ( b.range.start ) || a.range.end.compareTo ( b.range.end ) );
++  let shift = 0;
++
++  const ranges = sorted.map ( change => {
+ 
+     const linesNr = getStringLinesNr ( change.text );
+ 
+-    const start = new vscode.Position ( change.range.start.line, 0 );
+-    const end = new vscode.Position ( change.range.start.line + linesNr - 1, Infinity );
++    const start = new vscode.Position ( change.range.start.line + shift, 0 );
++    const end = new vscode.Position ( start.line + linesNr - 1, Infinity );
+     const range = new vscode.Range ( start, end );
+ 
++    shift += linesNr - getRangeLinesNr ( change.range );
++
+     return range;
+ 
+   });
++
++  return getWholeLineRangesMerged ( ranges );
++
++};
++
++const getWholeLineRangesMerged = ( ranges: vscode.Range[] ): vscode.Range[] => {
++
++  const merged: vscode.Range[] = [];
++
++  for ( const range of ranges.sort ( ( a, b ) => a.start.line - b.start.line ) ) {
++
++    const previous = merged[merged.length - 1];
++
++    if ( previous && range.start.line <= previous.end.line ) {
++
++      merged[merged.length - 1] = new vscode.Range ( previous.start.line, 0, Math.max ( previous.end.line, range.end.line ), Infinity );
++
++    } else {
++
++      merged.push ( range );
++
++    }
++
++  }
++
++  return merged;
+ 
+ };
+ 
+@@ -57,9 +90,11 @@
+ 
+     if ( !linesShift ) continue;
+ 
+-    const shiftLine = linesShift > 0 ? change.range.end.line + 1 : change.range.end.line + linesShift + 1;
+-
+-    shifts[shiftLine] = linesShift;
++    // Cached ranges still use OLD line indices; deleted lines must not move
++    // this boundary upwards. Multiple edits ending on one line add together.
++    const shiftLine = change.range.end.line + 1;
++
++    shifts[shiftLine] = ( shifts[shiftLine] || 0 ) + linesShift;
+     shifts.start = Math.min ( shifts.start, shiftLine );
+     shifts.end = Math.max ( shifts.end, shiftLine );
+ 
+diff --git a/src/decoration.ts b/src/decoration.ts
+--- a/src/decoration.ts
++++ b/src/decoration.ts
+@@ -9,7 +9,13 @@
+ 
+ /* HELPERS */
+ 
+-const EDITOR_REGEX_DECORATION_RANGES_CACHE = new MildMap<vscode.TextEditor, Map<RegExp, Map<vscode.TextEditorDecorationType, vscode.Range[]>>>();
++type EditorCache = {
++  document: vscode.TextDocument,
++  version: number,
++  highlights: Map<RegExp, Map<vscode.TextEditorDecorationType, vscode.Range[]>>
++};
++
++const EDITOR_REGEX_DECORATION_RANGES_CACHE = new MildMap<vscode.TextEditor, EditorCache>();
+ 
+ /* MAIN */
+ 
+@@ -20,10 +26,15 @@
+   const document = editor.document;
+   const theme = getConfig<string>( 'workbench.colorTheme' ) || 'Default';
+ 
+-  const highlightsPrev = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
++  const cache = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
++  const highlightsPrev = cache?.highlights;
+   const highlightsNext = new Map<RegExp, Map<vscode.TextEditorDecorationType, vscode.Range[]>>();
+ 
+-  if ( !change && highlightsPrev ) return 0; // No changes and already decorated, nothing to do
++  if ( cache?.document === document && cache.version === document.version ) return 0; // Already decorated at this version
++
++  // A hidden editor can miss several changes. Only the immediately preceding
++  // document version can be updated with this transaction's old coordinates.
++  const canUpdatePrevious = cache?.document === document && cache.version === document.version - 1;
+ 
+   /* COMPUTING DECORATIONS */
+ 
+@@ -43,7 +54,7 @@
+ 
+     /* PREPARING */
+ 
+-    const isPartial = change?.rangesNext.length && isIntraline && highlightsPrev;
++    const isPartial = change?.rangesNext.length && isIntraline && canUpdatePrevious;
+ 
+     const highlightRanges = isPartial ? change.rangesNext : [getRangeForWholeDocument ( document )];
+     const decorationsNext = highlightsNext.get ( highlightRe ) || new Map<vscode.TextEditorDecorationType, vscode.Range[]>();
+@@ -164,7 +175,7 @@
+ 
+   }
+ 
+-  EDITOR_REGEX_DECORATION_RANGES_CACHE.set ( editor, highlightsNext );
++  EDITOR_REGEX_DECORATION_RANGES_CACHE.set ( editor, { document, version: document.version, highlights: highlightsNext } );
+ 
+   return decorationsNr;
+ 
+@@ -177,7 +188,10 @@
+   const interlineNr = highlights.filter ( highlight => !highlight.isIntraline ).length;
+ 
+   const changeLinesNr = change?.rangesNext.reduce ( ( sum, range ) => sum + getRangeLinesNr ( range ), 0 ) || 0;
+-  const linesNr = interlineNr || !EDITOR_REGEX_DECORATION_RANGES_CACHE.has ( editor ) ? editor.document.lineCount : changeLinesNr;
++  const cache = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
++  const isCurrent = cache?.document === editor.document && cache.version === editor.document.version;
++  const canUpdatePrevious = cache?.document === editor.document && cache.version === editor.document.version - 1;
++  const linesNr = isCurrent ? 0 : interlineNr || !change || !canUpdatePrevious ? editor.document.lineCount : changeLinesNr;
+ 
+   const start = performance.now ();
+ 
+@@ -218,7 +232,7 @@
+ 
+ const undecorate = ( editor: vscode.TextEditor ): void => {
+ 
+-  const highlightsPrev = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor );
++  const highlightsPrev = EDITOR_REGEX_DECORATION_RANGES_CACHE.get ( editor )?.highlights;
+ 
+   if ( !highlightsPrev ) return;
+ 
+diff --git a/test/stage2.test.cjs b/test/stage2.test.cjs
+--- a/test/stage2.test.cjs
++++ b/test/stage2.test.cjs
+@@ -72,18 +72,18 @@
+   assert.equal(h.api.getChange([insert(0, 0, 'x')]).shifts, undefined);
+ });
+ 
+-known('QH-01-ranges', 'multiple insertions use final-document rescan coordinates', message => {
++test('QH-01-ranges: multiple insertions use final-document rescan coordinates', () => {
+   const h = createHarness();
+   const changes = [insert(1, 0, 'X\n'), insert(3, 0, 'Y\n')];
+   assert.deepEqual(Array.from(h.api.getChangeRangesNext(changes), coords), [
+     [1, 0, 2, Infinity], [4, 0, 5, Infinity]
+-  ], message);
+-});
+-
+-known('QH-02-shift', 'two newline insertions on the same old line accumulate', message => {
++  ]);
++});
++
++test('QH-02-shift: two newline insertions on the same old line accumulate', () => {
+   const h = createHarness();
+   const change = h.api.getChange([insert(0, 1, '\n'), insert(0, 3, '\n')]);
+-  assert.deepEqual(coords(h.api.getRangeShifted(new Range(1, 0, 1, 6), change.shifts)), [3, 0, 3, 6], message);
++  assert.deepEqual(coords(h.api.getRangeShifted(new Range(1, 0, 1, 6), change.shifts)), [3, 0, 3, 6]);
+ });
+ 
+ for (const eol of ['\n', '\r\n']) {
+@@ -116,29 +116,29 @@
+   sameAsFull(h, doc, editor);
+ });
+ 
+-known('QH-01-move', 'line move expressed as delete plus insert matches full recomputation', message => {
++test('QH-01-move: line move expressed as delete plus insert matches full recomputation', () => {
+   const { h, doc, editor } = started('A QH_RED\nB QH_RED\nC QH_RED\nD QH_RED');
+   h.edit(doc, [
+     { range: new Range(1, 0, 2, 0), text: '' },
+     insert(3, 0, 'B QH_RED\n')
+   ]);
+   assert.equal(doc.text, 'A QH_RED\nC QH_RED\nB QH_RED\nD QH_RED');
+-  sameAsFull(h, doc, editor, message);
++  sameAsFull(h, doc, editor);
+ });
+ 
+ for (const order of ['ascending', 'descending']) {
+-  known(`QH-01-${order}`, `multicursor multiline paste (${order} event order) matches full recomputation`, message => {
++  test(`QH-01-${order}: multicursor multiline paste (${order} event order) matches full recomputation`, () => {
+     const { h, doc, editor } = started(multiText);
+     h.edit(doc, multiEdits(), { order });
+     assert.equal(doc.text, 'MULTI_A QH_RED\nINSERTED QH_RED\nMULTI_B QH_RED\nINSERTED QH_RED\nMULTI_C QH_RED\nINSERTED QH_RED\nAFTER_MULTI QH_RED');
+-    sameAsFull(h, doc, editor, message);
++    sameAsFull(h, doc, editor);
+   });
+ }
+ 
+-known('QH-02-decoration', 'same-line multicursor newlines preserve the lower highlight', message => {
++test('QH-02-decoration: same-line multicursor newlines preserve the lower highlight', () => {
+   const { h, doc, editor } = started('LEFT QH_RED | RIGHT QH_RED\nAFTER_SAME_LINE QH_RED');
+   h.edit(doc, [insert(0, 11, '\n'), insert(0, 14, '\n')]);
+-  sameAsFull(h, doc, editor, message);
++  sameAsFull(h, doc, editor);
+ });
+ 
+ test('Undo of multiline multicursor insertion matches full recomputation from a clean final state', () => {
+@@ -151,16 +151,16 @@
+   sameAsFull(h, doc, editor);
+ });
+ 
+-known('QH-01-redo', 'Redo carries the same acceptance requirement as the original transaction', message => {
++test('QH-01-redo: Redo carries the same acceptance requirement as the original transaction', () => {
+   const { h, doc, editor } = started(multiText);
+   h.edit(doc, multiEdits(), { reason: 2 });
+-  sameAsFull(h, doc, editor, message);
+-});
+-
+-known('QH-04-overlap', 'two edits on one line do not emit duplicate decoration ranges', message => {
++  sameAsFull(h, doc, editor);
++});
++
++test('QH-04-overlap: two edits on one line do not emit duplicate decoration ranges', () => {
+   const { h, doc, editor } = started('LEFT QH_RED RIGHT\nTAIL QH_RED');
+   h.edit(doc, [insert(0, 1, 'x'), insert(0, 15, 'y')]);
+-  sameAsFull(h, doc, editor, message);
++  sameAsFull(h, doc, editor);
+ });
+ 
+ test('both visible editors receive consistent decoration updates', () => {
+@@ -171,14 +171,14 @@
+   assert.deepEqual(snapshot(right), snapshot(editor));
+ });
+ 
+-known('QH-03-hidden', 'an existing editor refreshes after its document changed while hidden', message => {
++test('QH-03-hidden: an existing editor refreshes after its document changed while hidden', () => {
+   const { h, doc, editor } = started('A QH_RED\nB');
+   const right = h.editor(doc); h.show([editor, right]);
+   h.show([editor]);
+   h.edit(doc, [insert(1, 1, ' QH_RED')]);
+   sameAsFull(h, doc, editor);
+   h.show([editor, right]);
+-  assert.deepEqual(snapshot(right), snapshot(editor), message);
++  assert.deepEqual(snapshot(right), snapshot(editor));
+ });
+ 
+ test('intraline edit reads only the changed line', () => {
+diff --git a/TESTING.md b/TESTING.md
+--- a/TESTING.md
++++ b/TESTING.md
+@@ -1,6 +1,6 @@
+ # Quick Highlight — テスト実行手順
+ 
+-更新日: 2026-10-05 JST。工程2で追加。
++更新日: 2026-10-05 JST。工程2で追加し、工程3で更新。
+ 
+ ## 実行
+ 
+@@ -15,10 +15,10 @@
+ 通常の回帰確認:
+ 
+ ```powershell
+-node --test --test-reporter=tap test/stage2.test.cjs
++node --test --test-reporter=tap test/stage2.test.cjs test/stage3.test.cjs
+ ```
+ 
+-工程2の基準結果は **32件、21合格、11件TODO、通常失敗0、スキップ0、終了コード0**。
++現行の工程3基準は **44件、42合格、2件TODO、通常失敗0、スキップ0、終了コード0**。工程2開始時点の履歴は32件、21合格、11件TODO。
+ TODOは実際にテストを実行して検出した既知の不具合であり、修正済み・全件合格という意味ではない。
+ 
+ 修正完了条件を厳密に判定する場合:
+@@ -27,7 +27,7 @@
+ node test/stage2.test.cjs --strict
+ ```
+ 
+-現行製品では **21合格、11失敗、終了コード1** になる。工程3・4では該当する失敗を解消する。
++工程3修正後の `stage2.test.cjs --strict` は **30合格、2失敗、終了コード1** になる。残る2件はQH-05の装飾寿命管理で、工程4の対象。工程3の追加12件は通常テストとしてすべて合格する。
+ `known(...)` は、指定IDの付いた受入条件のアサーションに限りTODOとする。依存の読込失敗、予期しない例外、別のアサーション失敗は通常の失敗になる。既知の不具合が解消して予期せず合格した場合も通常モードは失敗し、通常テストへの昇格を促す。
+ 
+ 修正したケースは `known(ID, name, message => ...)` から通常の `test(name, () => ...)` に移し、対応する `message` 引数と既知不具合記録を更新する。期待する正しい結果は変更しない。
+@@ -48,6 +48,7 @@
+ ## 仕組み
+ 
+ - `test/stage2-support.cjs`: `src/utils.ts`、`src/decoration.ts`、`src/index.ts`を既存esbuildでメモリー上にバンドルする。製品コードを書き換えず、VS Code APIの境界だけを小さな代替実装に接続する。
++- `test/stage3.test.cjs`: 混合編集、再走査の重複除去、古いキャッシュの復帰、版の欠落、同一URIの文書交換、表示イベントと変更イベントの順序、繰り返しUndo/Redo、動的装飾・interline、LF/CRLF各200回の決定的な連続編集を追加。連続編集では製品の再走査コードと独立した文字列検索で正しい装飾位置を求める。
+ - `test/stage2.test.cjs`: Node標準テストランナーを使用。各試験は別のモジュール・設定・イベント・キャッシュ状態で実行する。実際の `lomemo`、`mild-map`、`regexp-is-intraline`、`vscode-extras` を使う。
+ - 編集は旧文書のUTF-16座標から末尾順に適用する。部分更新の結果を、同じ最終文書に対する新規エディタの全文再計算と比較する。初回表示やキャプチャなどには固定座標の期待値も置く。
+ - 変更行だけの読込とinterlineの全文読込を観測する。実UI描画時間や実Extension Hostの性能測定とは区別する。
+@@ -56,13 +57,14 @@
+ 
+ ## 既知の失敗と次工程
+ 
+-| グループ | ケース数 | 受入条件 | 主担当工程 |
++| グループ | ケース数 | 受入条件 | 現在の状態 |
+ |---|---:|---|---|
+-| QH-01 | 5 | 複数編集後の再走査位置、行移動、複数行貼付け、Redoが全文再計算に一致する | 3 |
+-| QH-02 | 2 | 同一旧行での複数改行を合算し、下方の装飾が正しい位置になる | 3 |
+-| QH-03 | 1 | 非表示中に変更された文書を再表示するとキャッシュが更新される | 3 |
+-| QH-04 | 1 | 同一行への複数編集で重複する装飾範囲を送らない | 3 |
+-| QH-05 | 2 | 規則削除・設定再構築で不要な静的／動的DecorationTypeをdisposeする | 4 |
++| QH-01 | 5 | 複数編集後の再走査位置、行移動、複数行貼付け、Redoが全文再計算に一致 | 工程3で修正・通常合格 |
++| QH-02 | 2 | 同一旧行での複数改行を合算し、下方の装飾位置を維持 | 工程3で修正・通常合格 |
++| QH-03 | 1 | 非表示中に変わった文書を再表示すると更新 | 工程3で修正・通常合格 |
++| QH-04 | 1 | 同一行への複数編集で装飾範囲を重複させない | 工程3で修正・通常合格 |
++| QH-05 | 2 | 不要な静的／動的DecorationTypeをdisposeする | 未修正、工程4のTODO |
++
+ 
+ 通常合格の対象には、LF/CRLF・UTF-16、単一編集、コピー・複製・複数行貼付け、行削除、合成Undo、複数表示エディタ、intraline/interline、設定の色・source・flags・規則増減・enabled・コマンド、言語・ファイル・テーマフィルター、キャプチャ・動的装飾を含む。網羅的な互換性検証は工程6で行う。
+ 
+@@ -70,13 +72,13 @@
+ 
+ この工程で使う変更イベントは合成データ。`STAGE1_EVENT_LOG.jsonl` は2026-10-05 JSTのDropbox直下一覧に存在しなかったため、実機ログの再生とは呼ばない。
+ 
+-工程3・4の修正後に `STAGE1_PHYSICAL_DEVICE_CHECK.md` の手順を使い、次を確認する。工程2のために同じ実機試験を繰り返す必要はない。
++工程3では `STAGE3_PHYSICAL_DEVICE_CHECK.md` の3項目だけを確認する。`STAGE3_LAUNCH_TEST_WIN.ps1` は毎回独立した一時環境を作成し、前回データ・通常設定を保持する。ソースハッシュと版情報は一時環境の `RUN_INFO.json` に保存するが、イベントログではない。Windows実行は未検証。工程4以降に残す元の確認一覧は次のとおり。
+ 
+ 1. 2-1、2-2、2-3: 複数カーソル貼付け、同一行複数改行、Undo/Redo。
+ 2. 3: 同一文書を左右表示し、編集・Undo/Redo・非表示と再表示で一致すること。
+ 3. 4-7: 言語フィルター変更時に、実際の `document.languageId` と有効設定・設定変更イベントを記録する。原報告はok欄と「markdownにしても装飾されない」というメモが食い違うため未確定。`languageId=markdown` を固定した自動試験の合格だけで実機問題の解消としない。
+ 4. 4-1〜4-10: 設定保存直後の反映。再起動・文字編集・タブ切替での回復を区別する。
+-5. 修正後の起動、見た目、長時間利用、実Extension Hostの性能。工程2では新たに実行していない。
++5. 修正後の起動、見た目、長時間利用、実Extension Hostの性能。工程3もこの環境にVS Code本体がないため、実機の起動・描画・UI性能を実行していない。
+ 
+ ## 参照
+ 
+@@ -86,3 +88,9 @@
+ - [Node.js test runner: TODO tests](https://nodejs.org/api/test.html#todo-tests)
+ 
+ 参照確認日: 2026-10-05 JST。TODO試験は実行されるが終了コードに影響しないため、この基盤では上記の限定判定と厳密モードを併用する。
++
++## 工程3の測定範囲
++
++100行・1規則の単一行編集は、修正前後とも変更1行だけを読む。同一行2箇所と離れた1行を編集する例は、3回の行読込から2回へ減る。古い非表示キャッシュの復帰は、そのエディタに限り全文を1回読み直す。文書の同じ版を再表示しても追加走査しない。
++
++これらは合成文書で観測した読込量であり、VS Codeの実描画時間や入力遅延の改善率ではない。文書版に連続性がない場合も古い座標を使わず再構築する。通常のintraline編集は部分再走査を維持する。範囲シフト表は既存の行単位の形式を保ち、広い変更間隔のコスト最適化は工程5で測定する。
+diff --git a/changelog.md b/changelog.md
+--- a/changelog.md
++++ b/changelog.md
+@@ -1,3 +1,10 @@
++### Quick Highlight — Unreleased (2026-10-05, stage 3)
++- Fixed final-document rescan coordinates for multiple edits, including paste, move and redo.
++- Accumulated line shifts from edits on the same old line and merged overlapping scan ranges.
++- Invalidated stale editor decoration caches using document identity and version.
++- Preserved intraline partial updates and interline full scans; added regression coverage.
++- Windows verification is pending. See STAGE3_ACCEPTANCE.md and STAGE3_PHYSICAL_DEVICE_CHECK.md.
++
+ ### Version 2.1.0
+ - New highlight setting: "filterThemeRegex" to apply the decoration only when the name of the current theme matches this regex
+ - Added support for referencing vscode theme colors, prefixed with `theme.`
+diff --git a/MGMT.md b/MGMT.md
+--- a/MGMT.md
++++ b/MGMT.md
+@@ -10,6 +10,7 @@
+   - [x] stage 2
+     - 2026-10-05: テスト基盤整備完了。32件中21合格、既知不具合11件を失敗として検出。`STAGE2_ACCEPTANCE.md`、`TESTING.md` 参照。
+   - [n] stage 3
++    - 2026-10-05: 再装飾修正・自動検証済み。44件中42合格、工程4の既知不具合2件はTODO。工程3の実機確認待ち。`STAGE3_ACCEPTANCE.md`、`STAGE3_PHYSICAL_DEVICE_CHECK.md` 参照。
+   - [ ] stage 4
+   - [ ] stage 5
+   - [ ] stage 6
+diff --git a/PROCESS_CHART.md b/PROCESS_CHART.md
+--- a/PROCESS_CHART.md
++++ b/PROCESS_CHART.md
+@@ -13,7 +13,7 @@
+ 
+ ## 2. 現状
+ 
+-2026-10-05 JST: 工程1は最新 `MGMT.md` の利用者記録に従って完了扱い。工程2のテスト基盤整備も完了し、次は工程3。`STAGE2_ACCEPTANCE.md` と `TESTING.md` を参照。製品の不具合修正は未実施で、32試験中21合格・既知失敗11件が現在の基準。実機イベントログは未取得、言語フィルターの実機結果は未確定。
++2026-10-05 JST: 工程1・2は完了。工程3は再装飾の正しさを修正し、自動検証まで実施済み。工程3パッチ適用後のWindows実機確認を残す。`STAGE3_ACCEPTANCE.md`、`STAGE3_PHYSICAL_DEVICE_CHECK.md`、`TESTING.md` を参照。44試験中42合格・工程4の既知失敗2件が現基準。工程1の実機イベントログは未取得、言語フィルターの実機結果は未確定。
+ 
+ `MGMT.md` にある主要要件は次の3点。
+ 
+@@ -156,6 +156,8 @@
+ - intraline の部分更新が維持されている。
+ - 工程2の関連テストが通る。
+ 
++2026-10-05 JST: QH-01〜QH-04の9件を修正し通常テストへ昇格。追加12試験（LF/CRLF合計400回の連続編集を含む）も合格。通常intralineの部分走査を維持した。Windows実機確認は未実施のため工程3の最終完了判定は保留。`STAGE3_PHYSICAL_DEVICE_CHECK.md` の3項目を確認する。
++
+ ### 実行用プロンプト
+ 
+ > `PROCESS_CHART.md` の工程3「再装飾の正しさ修正」を実行してください。  
+@@ -411,14 +413,14 @@
+ 
+ ## 14. 現在地
+ 
+-**工程2「テスト基盤整備」完了。次は工程3「再装飾の正しさ修正」。**
++**工程3「再装飾の正しさ修正」は実装・自動検証済み。更新パッチの適用とWindows実機確認が残っている。**
+ 
+ 更新日: 2026-10-05 JST。推奨: 高性能モデル／高推論モード。
+ 
+-詳細な開始条件・未確認事項・実行指示は `STAGE2_ACCEPTANCE.md` に記録。工程1の実機記録は保存し、実機4-7の言語フィルターについてはチェック欄とメモが矛盾するため未確定のまま扱う。
++`STAGE3_ACCEPTANCE.md` の反映手順に従い `STAGE3_UPDATE.patch` を適用し、`STAGE3_PHYSICAL_DEVICE_CHECK.md` の3項目を確認する。元の実機報告・工程2の結果は履歴として保持。実機4-7の言語フィルター結果は工程4へ引き継ぐ。
+ 
+ 次に実行する推奨指示:
+ 
+-> `Dropbox\www\studio\Quick-Highlight` の工程3「再装飾の正しさ修正」を実行してください。最新の `MGMT.md`、`PROCESS_CHART.md`、`STAGE2_ACCEPTANCE.md`、`TESTING.md`、現行ソースと未コミット差分を確認してください。
+-> 工程2のQH-01〜QH-04を基準に、複数変更後の再走査位置、同一行の行シフト合算、非表示エディタのキャッシュ、重複範囲を修正し、修正した既知失敗を通常テストへ昇格してください。intralineの部分更新、設定・コマンド互換性を維持してください。
+-> コピー・貼付け・移動・複製・Undo/Redo・複数エディタを検証し、QH-05の装飾寿命管理は工程4の課題として残してください。必要な文書を更新し、原因、修正内容、テスト結果、性能への影響、実機確認の残件を報告してください。commit・push・公開はしないでください。
++> `Dropbox\www\studio\Quick-Highlight` の工程3について、最新の `MGMT.md`、`PROCESS_CHART.md`、`STAGE3_ACCEPTANCE.md`、`STAGE3_RESULTS.json`、`STAGE3_PHYSICAL_DEVICE_CHECK.md` と現行ソースを確認し、修正の適用状態と実機報告を照合してください。完了条件を満たしていれば管理・工程記録を整えてください。未実施・未確定の結果は推測で補わないでください。Git管理下に独自バックアップを作らず、commit・push・公開はしないでください。
++
++工程3完了後の次工程は工程4「設定変更の即時反映」。QH-05の2件、設定再読込・キャッシュ・DecorationType寿命と再適用を扱う。工程4の実行指示は `STAGE3_ACCEPTANCE.md` に記載。
+diff --git a/test/stage3.test.cjs b/test/stage3.test.cjs
+new file mode 100644
+--- /dev/null
++++ b/test/stage3.test.cjs
+@@ -0,0 +1,154 @@
++'use strict';
++
++const assert = require('node:assert/strict');
++const { test } = require('node:test');
++const { createHarness, defaultConfig, Document, Range, snapshot, fullSnapshot } = require('./stage2-support.cjs');
++
++const insert = (line, character, text) => ({ range: new Range(line, character, line, character), text });
++function started(text, config = defaultConfig()) {
++  const h = createHarness(config), doc = new Document(text), editor = h.editor(doc);
++  h.show([editor]); h.activate();
++  return { h, doc, editor };
++}
++
++// An independent literal oracle, rather than the product's full/partial paths.
++function expectedRed(doc) {
++  const ranges = [...doc.text.matchAll(/QH_RED/gi)].map(match => {
++    const a = doc.positionAt(match.index), b = doc.positionAt(match.index + match[0].length);
++    return [a.line, a.character, b.line, b.character];
++  });
++  return ranges.length ? [{ style: { rangeBehavior: 3, backgroundColor: '#ff0000' }, ranges }] : [];
++}
++
++test('mixed insertion, deletion and replacement use final coordinates in both editors', () => {
++  const { h, doc, editor } = started(Array.from({ length: 12 }, (_, i) => `${i} QH_RED`).join('\n'));
++  const right = h.editor(doc); h.show([editor, right]);
++  h.edit(doc, [
++    insert(1, 0, 'INSERT QH_RED\n'),
++    { range: new Range(3, 0, 6, 0), text: 'REPLACED QH_RED\n' },
++    { range: new Range(8, 0, 9, 0), text: '' },
++    insert(11, 0, 'LAST QH_RED\n')
++  ]);
++  assert.deepEqual(snapshot(editor), expectedRed(doc));
++  assert.deepEqual(snapshot(right), expectedRed(doc));
++});
++
++test('overlapping rescan lines are read once and distant unchanged lines are not read', () => {
++  const { h, doc, editor } = started(Array.from({ length: 100 }, () => 'QH_RED QH_RED').join('\n'));
++  doc.reads = [];
++  h.edit(doc, [insert(10, 0, '!'), insert(10, 13, '!'), insert(80, 0, '!')]);
++  assert.deepEqual(doc.reads, [[10, 0, 10, Infinity], [80, 0, 80, Infinity]]);
++  assert.deepEqual(snapshot(editor), expectedRed(doc));
++});
++
++test('mixed newlines on the same line cover the entire final changed region once', () => {
++  const { h, doc, editor } = started('QH_RED | QH_RED | QH_RED\nTAIL QH_RED');
++  doc.reads = [];
++  h.edit(doc, [insert(0, 7, '\nQH_RED\n'), insert(0, 16, '\n')]);
++  assert.deepEqual(doc.reads, [[0, 0, 3, Infinity]]);
++  assert.deepEqual(snapshot(editor), expectedRed(doc));
++});
++
++test('an entirely hidden document refreshes once after several transactions', () => {
++  const { h, doc, editor } = started('QH_RED\nTAIL');
++  h.show([]);
++  h.edit(doc, [insert(0, 0, 'NEW QH_RED\n')]);
++  h.edit(doc, [insert(2, 4, ' QH_RED')]);
++  doc.reads = [];
++  h.show([editor]);
++  assert.deepEqual(doc.reads, [[0, 0, 2, Infinity]]);
++  assert.deepEqual(snapshot(editor), expectedRed(doc));
++  doc.reads = [];
++  h.show([editor]);
++  assert.deepEqual(doc.reads, []);
++});
++
++test('a cache that missed a transaction cannot use only the latest edit', () => {
++  const { h, doc, editor } = started('QH_RED\nTAIL');
++  // Simulate an unavailable intermediate event while retaining the editor.
++  doc.edit([insert(0, 0, 'NEW QH_RED\n')]);
++  doc.reads = [];
++  h.edit(doc, [insert(2, 4, ' QH_RED')]);
++  assert.deepEqual(doc.reads, [[0, 0, 2, Infinity]]);
++  assert.deepEqual(snapshot(editor), expectedRed(doc));
++});
++
++test('document identity prevents reuse after reopening the same URI at the same version', () => {
++  const { h, doc, editor } = started('QH_RED');
++  const replacement = new Document('OTHER\nQH_RED', doc.languageId, doc.uri.fsPath);
++  editor.document = replacement;
++  h.show([editor]);
++  assert.deepEqual(snapshot(editor), expectedRed(replacement));
++});
++
++test('visible refresh before text callback does not apply the same shift twice', () => {
++  const { h, doc, editor } = started('QH_RED\nTAIL QH_RED');
++  const contentChanges = doc.edit([insert(0, 0, 'NEW QH_RED\n')]);
++  h.show([editor]);
++  doc.reads = [];
++  h.events.text.fire({ document: doc, contentChanges });
++  assert.deepEqual(doc.reads, []);
++  assert.deepEqual(snapshot(editor), expectedRed(doc));
++});
++
++test('repeated multicursor edit, undo and redo leave both editors consistent', () => {
++  const { h, doc, editor } = started('A QH_RED\nB QH_RED\nC QH_RED');
++  const right = h.editor(doc); h.show([editor, right]);
++  for (let cycle = 0; cycle < 8; cycle++) {
++    h.edit(doc, [insert(0, 0, 'X QH_RED\n'), insert(2, 0, 'Y QH_RED\n')], { reason: cycle ? 2 : undefined });
++    assert.deepEqual(snapshot(editor), expectedRed(doc));
++    assert.deepEqual(snapshot(right), snapshot(editor));
++    h.edit(doc, [
++      { range: new Range(0, 0, 1, 0), text: '' },
++      { range: new Range(3, 0, 4, 0), text: '' }
++    ], { reason: 1 });
++    assert.equal(doc.text, 'A QH_RED\nB QH_RED\nC QH_RED');
++    assert.deepEqual(snapshot(editor), expectedRed(doc));
++    assert.deepEqual(snapshot(right), snapshot(editor));
++  }
++});
++
++test('dynamic capture styles and interline rules survive mixed edits', () => {
++  const config = defaultConfig();
++  config.regexes['(#[0-9a-f]{6})'] = [{ backgroundColor: '$1' }];
++  config.regexes['(BEGIN[\\s\\S]*?END)'] = [{ color: '#008800' }];
++  const { h, doc, editor } = started('BEGIN\n#ff0000 QH_RED\n#00ff00\nEND\n#0000ff', config);
++  h.edit(doc, [insert(1, 0, '#ffffff\n'), { range: new Range(2, 0, 2, 7), text: '#123456\nQH_RED' }]);
++  assert.deepEqual(snapshot(editor), fullSnapshot(h, doc));
++  assert.ok(!snapshot(editor).some(row => row.style.backgroundColor === '#00ff00'));
++});
++
++for (const eol of ['\n', '\r\n']) {
++  test(`seeded 200-transaction literal oracle with UTF-16 and ${JSON.stringify(eol)}`, () => {
++    let seed = 0x514803;
++    const random = n => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % n; };
++    const { h, doc, editor } = started(Array.from({ length: 10 }, (_, i) => `${i} 😀 QH_RED qh_red`).join(eol));
++    const right = h.editor(doc); h.show([editor, right]);
++    const pieces = ['', 'QH_RED', `x${eol}QH_RED${eol}`, '😀', eol, 'qh_red', 'x'];
++    for (let step = 0; step < 200; step++) {
++      const length = doc.text.length, edits = [], slots = 3;
++      // Non-overlapping selections from independent thirds of the old text.
++      for (let slot = 0; slot < slots; slot++) {
++        const lo = Math.floor(length * slot / slots), hi = Math.floor(length * (slot + 1) / slots);
++        if (hi - lo < 3) continue;
++        const startOffset = lo + random(Math.max(1, hi - lo - 1));
++        const endOffset = Math.min(hi - 1, startOffset + random(9));
++        edits.push({ range: new Range(doc.positionAt(startOffset), doc.positionAt(endOffset)), text: pieces[random(pieces.length)] });
++      }
++      if (!edits.length) edits.push(insert(0, 0, `QH_RED${eol}QH_RED`));
++      h.edit(doc, edits, { order: step % 2 ? 'ascending' : 'descending' });
++      assert.deepEqual(snapshot(editor), expectedRed(doc), `seed 0x514803, step ${step}`);
++      assert.deepEqual(snapshot(right), snapshot(editor), `right editor, step ${step}`);
++    }
++  });
++}
++
++test('debug line count includes the full refresh of a stale hidden cache', () => {
++  const config = defaultConfig(); config.debugging = true;
++  const { h, doc, editor } = started('QH_RED\nTAIL', config);
++  h.show([]); h.edit(doc, [insert(0, 0, 'QH_RED\n')]);
++  h.state.alerts.length = 0;
++  h.show([editor]);
++  assert.match(h.state.alerts[0], / - 3 lines - /);
++  assert.match(h.state.alerts[1], / - 0 lines - /);
++});
+diff --git a/STAGE3_LAUNCH_TEST_WIN.ps1 b/STAGE3_LAUNCH_TEST_WIN.ps1
+new file mode 100644
+--- /dev/null
++++ b/STAGE3_LAUNCH_TEST_WIN.ps1
+@@ -0,0 +1,83 @@
++param()
++
++$ErrorActionPreference = 'Stop'
++$RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
++Set-Location $RepoRoot
++
++foreach ($CommandName in @('node', 'code')) {
++    if (-not (Get-Command $CommandName -ErrorAction SilentlyContinue)) {
++        throw "Required command '$CommandName' was not found in PATH."
++    }
++}
++if (-not (Test-Path (Join-Path $RepoRoot 'node_modules\esbuild\bin\esbuild'))) {
++    throw 'Dependencies are missing. Run npm install --no-package-lock in this repository first.'
++}
++
++# A new directory on every run: previous tests, profiles and logs are retained.
++$RunRoot = Join-Path $env:TEMP ('quick-highlight-stage3-' + [Guid]::NewGuid().ToString('N'))
++$WorkspaceRoot = Join-Path $RunRoot 'workspace'
++$ExtensionRoot = Join-Path $RunRoot 'extension'
++$UserDataRoot = Join-Path $RunRoot 'user-data'
++$ExtensionsRoot = Join-Path $RunRoot 'extensions'
++foreach ($Directory in @($RunRoot, $WorkspaceRoot, $ExtensionRoot, $UserDataRoot, $ExtensionsRoot,
++    (Join-Path $WorkspaceRoot '.vscode'), (Join-Path $ExtensionRoot 'dist'))) {
++    New-Item -ItemType Directory -Path $Directory | Out-Null
++}
++
++Copy-Item (Join-Path $RepoRoot 'package.json') (Join-Path $ExtensionRoot 'package.json')
++Copy-Item (Join-Path $RepoRoot 'resources') (Join-Path $ExtensionRoot 'resources') -Recurse
++$EsbuildScript = Join-Path $RepoRoot 'node_modules\esbuild\bin\esbuild'
++& node $EsbuildScript (Join-Path $RepoRoot 'src\index.ts') --bundle --external:vscode `
++    --format=cjs --platform=node --target=es2020 "--outfile=$(Join-Path $ExtensionRoot 'dist\index.js')"
++if ($LASTEXITCODE -ne 0) { throw 'Stage 3 bundle failed.' }
++
++$Settings = [ordered]@{
++    'highlight.enabled' = $true
++    'highlight.debugging' = $false
++    'highlight.regexFlags' = 'gi'
++    'highlight.regexes' = [ordered]@{
++        '(QH_RED)' = @([ordered]@{ backgroundColor = 'rgba(255,0,0,0.35)'; fontWeight = 'bold' })
++    }
++    'workbench.startupEditor' = 'none'
++}
++$Settings | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $WorkspaceRoot '.vscode\settings.json') -Encoding UTF8
++@'
++# Stage 3 fixture
++
++MULTI_A
++MULTI_B
++MULTI_C
++AFTER_MULTI QH_RED
++
++SAME_LINE_LEFT QH_RED | SAME_LINE_RIGHT QH_RED
++AFTER_SAME_LINE QH_RED
++
++COPY QH_RED
++TAIL QH_RED
++'@ | Set-Content (Join-Path $WorkspaceRoot 'STAGE3_TEST_FIXTURE.md') -Encoding UTF8
++'Other editor tab for the hidden-editor check.' | Set-Content (Join-Path $WorkspaceRoot 'STAGE3_OTHER.md') -Encoding UTF8
++
++$NodeVersion = (& node --version)
++if ($LASTEXITCODE -ne 0) { throw 'Node version check failed.' }
++$CodeVersion = @(& code --version)
++if ($LASTEXITCODE -ne 0) { throw 'VS Code version check failed.' }
++$SourceHashes = [ordered]@{}
++Get-ChildItem (Join-Path $RepoRoot 'src') -Filter '*.ts' | Sort-Object Name | ForEach-Object {
++    $SourceHashes[$_.Name] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
++}
++[ordered]@{
++    started_at = (Get-Date).ToString('o')
++    repository = $RepoRoot
++    run_directory = $RunRoot
++    node = $NodeVersion
++    vscode = $CodeVersion
++    sources_sha256 = $SourceHashes
++    bundle_sha256 = (Get-FileHash (Join-Path $ExtensionRoot 'dist\index.js') -Algorithm SHA256).Hash.ToLowerInvariant()
++} | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $RunRoot 'RUN_INFO.json') -Encoding UTF8
++
++Write-Host "Stage 3 test directory: $RunRoot"
++Write-Host 'Use STAGE3_PHYSICAL_DEVICE_CHECK.md for the three checks.'
++Write-Host 'If VS Code asks, trust this generated test workspace to activate the extension.'
++& code --new-window --user-data-dir $UserDataRoot --extensions-dir $ExtensionsRoot `
++    --extensionDevelopmentPath $ExtensionRoot $WorkspaceRoot (Join-Path $WorkspaceRoot 'STAGE3_TEST_FIXTURE.md')
++if ($LASTEXITCODE -ne 0) { throw 'VS Code could not start the Extension Development Host.' }
+diff --git a/STAGE3_PHYSICAL_DEVICE_CHECK.md b/STAGE3_PHYSICAL_DEVICE_CHECK.md
+new file mode 100644
+--- /dev/null
++++ b/STAGE3_PHYSICAL_DEVICE_CHECK.md
+@@ -0,0 +1,73 @@
++# Quick Highlight — 工程3 実機確認
++
++作成日: 2026-10-05 JST。状態: **未実施**。
++
++工程3の修正箇所だけを確認する。前回の工程1報告はそのまま保存し、設定変更・言語フィルターの再確認は工程4で行う。
++
++## 起動
++
++`Dropbox\www\studio\Quick-Highlight` で、工程3パッチをまだ適用していない場合:
++
++```powershell
++git apply STAGE3_UPDATE.patch
++```
++
++エラーが出た場合はそこで止め、表示内容を知らせる。既存変更と衝突した場合も、強制上書き・`--reject`・`git reset --hard` は使わない。
++
++適用後に起動:
++
++```powershell
++powershell -ExecutionPolicy Bypass -File .\STAGE3_LAUNCH_TEST_WIN.ps1
++```
++
++毎回新しい一時フォルダーにテスト環境を作る。工程1のデータや既存の試験ウィンドウは削除しない。通常のVS Code設定にも書き込まない。依存不足と表示された場合だけ、リポジトリ直下で `npm install --no-package-lock` を実行してから再実行する。
++
++開いた **Extension Development Host** の `STAGE3_TEST_FIXTURE.md` を使う。信頼確認が表示された場合は、この生成されたテスト用ワークスペースを信頼する。初めに `AFTER_MULTI QH_RED` などの `QH_RED` に背景色が付くことを確認する。付かない場合は以降を進めず記録する。
++
++起動スクリプトはこの環境にPowerShell・VS Code本体がないため、Windows上での実行は未検証。
++
++## 結果の記入
++
++試験日:
++
++起動結果（ok / ng）:
++
++コンソールに表示された `Stage 3 test directory`:
++
++同フォルダーの `RUN_INFO.json` にNode・VS Codeの版と実際にビルドしたソースのSHA-256が残る。問題があれば結果と一緒に提示する。テキスト編集イベントのログではない。
++
++| 確認 | 結果（ok / ng） | メモ |
++|---|---|---|
++| 1. 複数カーソル貼付け・Undo/Redo | 未確認 | |
++| 2. 同一行の複数改行・Undo/Redo | 未確認 | |
++| 3. 左右表示・非表示からの復帰 | 未確認 | |
++
++### 1. 複数カーソル貼付け・Undo/Redo
++
++1. `MULTI_A`、`MULTI_B`、`MULTI_C` の各行末に `Alt+Click` で3つのカーソルを置く。
++2. 次の2行を、先頭の空白も含めてコピーし、一度に貼り付ける。
++
++```text
++ QH_RED
++INSERTED QH_RED
++```
++
++3. 各追加行と `AFTER_MULTI QH_RED` のすべてに背景色が付くことを確認する。
++4. Undo、その後Redoを行い、どちらでも文字と装飾が一致することを確認する。
++
++### 2. 同一行の複数改行・Undo/Redo
++
++1. `SAME_LINE_LEFT QH_RED | SAME_LINE_RIGHT QH_RED` の `|` の直前・直後に2つのカーソルを置く。
++2. Enterを1回押す。
++3. 分割した行と、その下の `AFTER_SAME_LINE QH_RED` の装飾がずれないことを確認する。
++4. Undo、その後Redoを行い、同じ状態を維持できることを確認する。
++
++### 3. 左右表示・非表示からの復帰
++
++1. **Split Editor Right** で同じファイルを左右に表示する。
++2. 左側で確認1または2のUndo/Redoを行い、左右の装飾が一致することを確認する。
++3. 右側で `STAGE3_OTHER.md` を開く。
++4. 左側の `TAIL QH_RED` をコピーして新しい行に貼り付ける。
++5. 右側を元のファイルへ戻し、追加した行も含めて左右が一致することを確認する。
++
++すべてokなら、このファイルに記録して「工程3の実機確認を書いた」と伝える。反映内容・結果を照合して工程3の完了判定を行う。次の工程4は高性能モデル／高推論モードを推奨。
+diff --git a/STAGE3_RESULTS.json b/STAGE3_RESULTS.json
+new file mode 100644
+--- /dev/null
++++ b/STAGE3_RESULTS.json
+@@ -0,0 +1,186 @@
++{
++  "stage": 3,
++  "date_jst": "2026-10-05",
++  "status": "implemented-and-automated-tests-passed; patch-application-and-Windows-check-pending",
++  "baseline_git_head": "e47872ce7e05c128decac519b549b7da3a62daad",
++  "runtime": {
++    "platform": "linux",
++    "node": "v24.19.0",
++    "npm": "11.9.0",
++    "dependencies": {
++      "typescript": "5.9.3",
++      "esbuild": "0.27.2",
++      "@types/vscode": "1.140.0",
++      "regexp-is-intraline": "1.0.2"
++    }
++  },
++  "tests": {
++    "normal": {
++      "total": 44,
++      "passed": 42,
++      "failed": 0,
++      "todo": 2,
++      "skipped": 0,
++      "exit_code": 0
++    },
++    "strict_stage2": {
++      "total": 32,
++      "passed": 30,
++      "failed": 2,
++      "todo": 0,
++      "exit_code": 1
++    },
++    "remaining_defects": [
++      "QH-05-static-lifetime",
++      "QH-05-dynamic-lifetime"
++    ],
++    "promoted_stage3_tests": 9,
++    "additional_stage3_tests": 12,
++    "seeded_transactions": {
++      "seed": "0x514803",
++      "LF": 200,
++      "CRLF": 200
++    }
++  },
++  "checks": [
++    {
++      "name": "tests",
++      "command": [
++        "node",
++        "--test",
++        "--test-reporter=tap",
++        "test/stage2.test.cjs",
++        "test/stage3.test.cjs"
++      ],
++      "exit_code": 0,
++      "expected_exit_code": 0,
++      "expected_exit": true
++    },
++    {
++      "name": "strict-stage2",
++      "command": [
++        "node",
++        "test/stage2.test.cjs",
++        "--strict"
++      ],
++      "exit_code": 1,
++      "expected_exit_code": 1,
++      "expected_exit": true
++    },
++    {
++      "name": "types",
++      "command": [
++        "node",
++        "node_modules/typescript/bin/tsc",
++        "--noEmit"
++      ],
++      "exit_code": 0,
++      "expected_exit_code": 0,
++      "expected_exit": true
++    },
++    {
++      "name": "compile",
++      "command": [
++        "npm",
++        "run",
++        "compile"
++      ],
++      "exit_code": 0,
++      "expected_exit_code": 0,
++      "expected_exit": true
++    },
++    {
++      "name": "bundle",
++      "command": [
++        "npm",
++        "run",
++        "bundle:dev"
++      ],
++      "exit_code": 0,
++      "expected_exit_code": 0,
++      "expected_exit": true
++    }
++  ],
++  "source_sha256_before": {
++    "src/commands.ts": "ac5db37f4911f83c2f58b240920d7519c1dc38cfc9c0512a7a4db50bd97c3402",
++    "src/constants.ts": "fb164937c38131b2fd6750d393bfbaa39ceb4495270647cdfca77cfe32464015",
++    "src/decoration.ts": "dbe6cbe0d15b53d508bee26c7aaa8ec9dec39b45475d91730737ac3c21ffa753",
++    "src/index.ts": "1c61afd69d10724338980d8be2337d2d5f3d5f9db969c4d7a9a81395deee4f80",
++    "src/types.ts": "a768b8aa1e4d1724f21e0f9061119f0ef5aafb557eb68a2e8adf9f466fd9b881",
++    "src/utils.ts": "d18255023b8acfd269e16baa10d9fc57c2b86bc1219148f86ef224df70c367f8"
++  },
++  "source_sha256_after": {
++    "src/commands.ts": "ac5db37f4911f83c2f58b240920d7519c1dc38cfc9c0512a7a4db50bd97c3402",
++    "src/constants.ts": "fb164937c38131b2fd6750d393bfbaa39ceb4495270647cdfca77cfe32464015",
++    "src/decoration.ts": "6f6476ec20fa89ac069266094e5742160c4a37bcd01ad3fe29b145dc5834d98b",
++    "src/index.ts": "1c61afd69d10724338980d8be2337d2d5f3d5f9db969c4d7a9a81395deee4f80",
++    "src/types.ts": "a768b8aa1e4d1724f21e0f9061119f0ef5aafb557eb68a2e8adf9f466fd9b881",
++    "src/utils.ts": "59bfa3cf4dc38ed1cbb8d112d27a4b22a9f26ead6f4b1e785bb21694b5f9f021"
++  },
++  "other_sha256": {
++    "package.json": "22114f3ca190ed8567619c8a2d2f15d587a74904c90c6e7a37f68755f8650e6b",
++    "test/stage2-support.cjs": "7ba5e417155d0c19c8f51f60f47a01279742ee9f813a94b74507dad3deaddc71",
++    "test/stage2.test.cjs": "19b9efb2e1eb8493fa65a852aa6559dffdd695cfe977cef6852addf162661691",
++    "test/stage3.test.cjs": "fc2c28b3a38026e384699d8bef7a1e2d2b8b542afde8d11d59593a387ac89acd",
++    "STAGE3_LAUNCH_TEST_WIN.ps1": "3e50914d569ac313442070d0f6257c22b7188995a28f1b44cc5f5b37cd301677"
++  },
++  "measurement": {
++    "condition": "100 lines, one literal rule, initially 200 decoration ranges; synthetic document; not UI timings",
++    "results": {
++      "before": {
++        "single_line": {
++          "read_calls": 1,
++          "scanned_lines": 1,
++          "decoration_ranges": 200
++        },
++        "same_line_and_distant": {
++          "read_calls": 3,
++          "scanned_lines": 3,
++          "decoration_ranges": 202
++        },
++        "hidden_resume": {
++          "read_calls": 0,
++          "scanned_lines": 0,
++          "decoration_ranges": 200
++        }
++      },
++      "after": {
++        "single_line": {
++          "read_calls": 1,
++          "scanned_lines": 1,
++          "decoration_ranges": 200
++        },
++        "same_line_and_distant": {
++          "read_calls": 2,
++          "scanned_lines": 2,
++          "decoration_ranges": 200
++        },
++        "hidden_resume": {
++          "read_calls": 1,
++          "scanned_lines": 100,
++          "decoration_ranges": 201
++        }
++      }
++    }
++  },
++  "patch_checks": [
++    "clean baseline check/apply and exact file bytes",
++    "second application rejected without changes",
++    "modified source conflict rejects entire patch without changes",
++    "existing added-file conflict rejects entire patch without changes"
++  ],
++  "not_executed": [
++    "Windows PowerShell launcher",
++    "VS Code Extension Development Host",
++    "physical rendering",
++    "UI performance",
++    "real editor-event log replay"
++  ],
++  "log_sha256": {
++    "bundle.log": "6f20e69efb3648b598d2ff6416ff97306820a3951371b7f51b6af9e77bb71e2f",
++    "compile.log": "37b398240fd72791d1acad447ebab0a18241198a8364ac832517911f56bed198",
++    "strict-stage2.log": "caf43950e107a904fee8fb1895dc62de33523865f77090f44b952188fd13f373",
++    "tests.log": "eee7b2891e88e1cfc0c11d31f87b866d73a3e44583fd2608d3b358a7c6854815",
++    "types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
++  }
++}

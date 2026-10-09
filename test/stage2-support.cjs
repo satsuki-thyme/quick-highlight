@@ -120,7 +120,7 @@ const defaultConfig = () => ({
 });
 
 function createHarness(config = defaultConfig()) {
-  const events = Object.fromEntries(['text', 'configuration', 'active', 'visible', 'close'].map(key => [key, signal()]));
+  const events = Object.fromEntries(['text', 'configuration', 'active', 'visible', 'close', 'open'].map(key => [key, signal()]));
   const state = {
     config: plain(config), theme: 'Default Dark Modern', types: [], editors: [], commands: new Map(), alerts: []
   };
@@ -155,6 +155,7 @@ function createHarness(config = defaultConfig()) {
       onDidChangeTextDocument: fn => events.text.subscribe(fn),
       onDidChangeConfiguration: fn => events.configuration.subscribe(fn),
       onDidCloseTextDocument: fn => events.close.subscribe(fn),
+      onDidOpenTextDocument: fn => events.open.subscribe(fn),
       getConfiguration(section = '') {
         return {
           get(key, fallback) { return readConfig([section, key].filter(Boolean).join('.')) ?? fallback; },

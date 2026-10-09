@@ -1,13 +1,13 @@
 
 /* IMPORT */
 
-import memoize from 'lomemo';
 import isEmptyPlainObject from 'plain-object-is-empty';
 import isIntraline from 'regexp-is-intraline';
 import vscode from 'vscode';
 import {getConfig} from 'vscode-extras';
 import {CONFIG_REGEXES_NORMALIZATION_MAP, HIGHLIGHTS_LIMIT} from './constants';
-import type {Change, ChangeShiftsMap, Decoration, Highlight, Options} from './types';
+import DecorationTypes from './decoration-types';
+import type {Change, ChangeShiftsMap, Highlight, Options} from './types';
 
 /* MAIN */
 
@@ -23,23 +23,56 @@ const getChange = ( changes: readonly vscode.TextDocumentContentChangeEvent[] ):
 
 const getChangeRangesPrev = ( changes: readonly vscode.TextDocumentContentChangeEvent[] ): vscode.Range[] => {
 
-  return changes.map ( change => getRangeForWholeLines ( change.range ) );
+  return getWholeLineRangesMerged ( changes.map ( change => getRangeForWholeLines ( change.range ) ) );
 
 };
 
 const getChangeRangesNext = ( changes: readonly vscode.TextDocumentContentChangeEvent[] ): vscode.Range[] => {
 
-  return changes.map ( change => {
+  // All ranges describe the old document. Earlier edits move the lines scanned
+  // in the final document, regardless of the order in contentChanges.
+  const sorted = [...changes].sort ( ( a, b ) => a.range.start.compareTo ( b.range.start ) || a.range.end.compareTo ( b.range.end ) );
+  let shift = 0;
+
+  const ranges = sorted.map ( change => {
 
     const linesNr = getStringLinesNr ( change.text );
 
-    const start = new vscode.Position ( change.range.start.line, 0 );
-    const end = new vscode.Position ( change.range.start.line + linesNr - 1, Infinity );
+    const start = new vscode.Position ( change.range.start.line + shift, 0 );
+    const end = new vscode.Position ( start.line + linesNr - 1, Infinity );
     const range = new vscode.Range ( start, end );
+
+    shift += linesNr - getRangeLinesNr ( change.range );
 
     return range;
 
   });
+
+  return getWholeLineRangesMerged ( ranges );
+
+};
+
+const getWholeLineRangesMerged = ( ranges: vscode.Range[] ): vscode.Range[] => {
+
+  const merged: vscode.Range[] = [];
+
+  for ( const range of ranges.sort ( ( a, b ) => a.start.line - b.start.line ) ) {
+
+    const previous = merged[merged.length - 1];
+
+    if ( previous && range.start.line <= previous.end.line ) {
+
+      merged[merged.length - 1] = new vscode.Range ( previous.start.line, 0, Math.max ( previous.end.line, range.end.line ), Infinity );
+
+    } else {
+
+      merged.push ( range );
+
+    }
+
+  }
+
+  return merged;
 
 };
 
@@ -57,9 +90,11 @@ const getChangeShiftMap = ( changes: readonly vscode.TextDocumentContentChangeEv
 
     if ( !linesShift ) continue;
 
-    const shiftLine = linesShift > 0 ? change.range.end.line + 1 : change.range.end.line + linesShift + 1;
+    // Cached ranges still use OLD line indices; deleted lines must not move
+    // this boundary upwards. Multiple edits ending on one line add together.
+    const shiftLine = change.range.end.line + 1;
 
-    shifts[shiftLine] = linesShift;
+    shifts[shiftLine] = ( shifts[shiftLine] || 0 ) + linesShift;
     shifts.start = Math.min ( shifts.start, shiftLine );
     shifts.end = Math.max ( shifts.end, shiftLine );
 
@@ -81,85 +116,8 @@ const getChangeShiftMap = ( changes: readonly vscode.TextDocumentContentChangeEv
 
 };
 
-const getDecoration = memoize ( ( regex: RegExp, options: vscode.DecorationRenderOptions ): Decoration => { // It's important to memoize decorations by regex too, it makes updating them simpler
+const getHighlights = ( config: Record<string, unknown> | undefined, types: DecorationTypes ): Highlight[] => {
 
-  const optionsSerialized = JSON.stringify ( options );
-  const isDynamic = /\$\d+/.test ( optionsSerialized );
-
-  if ( isDynamic ) { // Dynamic decoration
-
-    return memoize ( ( match: RegExpExecArray ): vscode.TextEditorDecorationType => {
-
-      const optionsResolved = optionsSerialized.replace ( /\$(\d+)/g, ( _, index ) => match[index] );
-      const options = JSON.parse ( optionsResolved );
-      const optionsWithThemeColors = getDecorationOptionsWithThemeColors ( options );
-      const decoration = vscode.window.createTextEditorDecorationType ( optionsWithThemeColors );
-
-      return decoration;
-
-    }, match => match.join ( '-' ) );
-
-  } else { // Static decoration
-
-    const optionsWithThemeColors = getDecorationOptionsWithThemeColors ( options );
-    const decoration = vscode.window.createTextEditorDecorationType ( optionsWithThemeColors );
-
-    return () => decoration;
-
-  }
-
-}, ( regex, value ) => `${regex.toString ()}-${JSON.stringify ( value )}` );
-
-const getDecorationOptionsWithThemeColors = (() => {
-
-  const optionKeys = ['before', 'after', 'light', 'dark'] as const;
-  const themeableKeys = ['backgroundColor', 'borderColor', 'color', 'outlineColor', 'overviewRulerColor'] as const;
-
-  return ( options: vscode.DecorationRenderOptions ): vscode.DecorationRenderOptions => {
-
-    const optionsWithThemeColors: vscode.DecorationRenderOptions = { ...options };
-
-    for ( const key of optionKeys ) {
-
-      if ( key in optionsWithThemeColors ) {
-
-        const value = optionsWithThemeColors[key];
-
-        if ( isObject ( value ) ) {
-
-          optionsWithThemeColors[key] = getDecorationOptionsWithThemeColors ( value );
-
-        }
-
-      }
-
-    }
-
-    for ( const key of themeableKeys ) {
-
-      if ( key in optionsWithThemeColors ) {
-
-        const value = optionsWithThemeColors[key];
-
-        if ( isString ( value ) && value.startsWith ( 'theme.' ) ) {
-
-          optionsWithThemeColors[key] = new vscode.ThemeColor ( value.slice ( 6 ) );
-
-        }
-
-      }
-
-    }
-
-    return optionsWithThemeColors;
-
-  };
-
-})();
-
-const getHighlights = (): Highlight[] => {
-
-  const config = getConfig ( 'highlight' );
   const decorations = isObject ( config?.['decorations'] ) ? config['decorations'] : { rangeBehavior: 3 };
   const regexes = isObject ( config?.['regexes'] ) ? config['regexes'] : {};
   const regexFlags = isString ( config?.['regexFlags'] ) ? config['regexFlags'] : 'gi';
@@ -180,7 +138,7 @@ const getHighlights = (): Highlight[] => {
 
     const highlightDecorationsRaw = isObject ( highlightConfig ) && isArray ( highlightConfig['decorations'] ) && highlightConfig['decorations'].every ( isObject ) ? highlightConfig['decorations'] : isArray ( highlightConfig ) && highlightConfig.every ( isObject ) ? highlightConfig : [];
     const highlightDecorationsRawNormalized = highlightDecorationsRaw.map ( decoration => ({ ...decorations, ...decoration }) );
-    const highlightDecorations = highlightDecorationsRawNormalized.map ( decoration => getDecoration ( highlightRe, decoration ) );
+    const highlightDecorations = highlightDecorationsRawNormalized.map ( decoration => types.get ( highlightRe, decoration ) );
 
     const highlightLimit = getRegExp ( highlightReSourceNormalized, highlightReFlagsFallback, '' ).global ? HIGHLIGHTS_LIMIT : 1;
 
@@ -208,13 +166,18 @@ const getHighlights = (): Highlight[] => {
 
 const getOptions = (): Options => {
 
-  const config = getConfig ( 'highlight' );
+  const config = getConfig<Record<string, unknown>> ( 'highlight' );
   const debugging = isBoolean ( config?.['debugging'] ) ? config['debugging'] : false;
   const enabled = isBoolean ( config?.['enabled'] ) ? config['enabled'] : true;
-  const highlights = getHighlights ();
-  const options: Options = { debugging, enabled, highlights };
+  const types = new DecorationTypes ();
 
-  return options;
+  try {
+    const highlights = enabled ? getHighlights ( config, types ) : [];
+    return { debugging, enabled, highlights, dispose: () => types.dispose () };
+  } catch ( error ) {
+    types.dispose ();
+    throw error;
+  }
 
 };
 
@@ -251,7 +214,7 @@ const getRangeShifted = ( range: vscode.Range, shifts?: ChangeShiftsMap ): vscod
 
 };
 
-const getRegExp = memoize ( ( value: string, flagsFallback: string, flagsExtra: string ): RegExp => {
+const getRegExp = ( value: string, flagsFallback: string, flagsExtra: string ): RegExp => {
 
   const regexRe = /^\/(.*)\/([gimsuvyd]*)$/;
   const match = value.match ( regexRe );
@@ -271,7 +234,7 @@ const getRegExp = memoize ( ( value: string, flagsFallback: string, flagsExtra: 
 
   }
 
-}, ( value, flagsFallback, flagsExtra ) => `${value}-${flagsFallback}-${flagsExtra}` );
+};
 
 const getStringLinesNr = (() => {
 
@@ -323,11 +286,11 @@ const isRegExp = ( value: unknown ): value is RegExp => {
 
 };
 
-const isRegExpIntraline = memoize ( ( regex: RegExp ): boolean => {
+const isRegExpIntraline = ( regex: RegExp ): boolean => {
 
   return isIntraline ( regex );
 
-});
+};
 
 const isString = ( value: unknown ): value is string => {
 
@@ -350,5 +313,5 @@ const uniqChars = ( value: string ): string => {
 /* EXPORT */
 
 export {getChange, getChangeRangesPrev, getChangeRangesNext, getChangeShiftMap};
-export {getDecoration, getHighlights, getOptions, getRangeForWholeDocument, getRangeForWholeLines, getRangeLinesNr, getRangeShifted, getRegExp, getStringLinesNr};
+export {getOptions, getRangeForWholeDocument, getRangeForWholeLines, getRangeLinesNr, getRangeShifted, getRegExp, getStringLinesNr};
 export {isArray, isBoolean, isEmptyPlainObject, isNumber, isObject, isRegExp, isRegExpIntraline, isString, uniq, uniqChars};

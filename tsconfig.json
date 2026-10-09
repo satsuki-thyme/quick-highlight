@@ -3,5 +3,10 @@
   "compilerOptions": {
     "noUnusedParameters": false,
     "target": "es2022"
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.backup-*"
+  ]
 }

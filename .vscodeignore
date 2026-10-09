@@ -6,3 +6,8 @@ resources/logo.png
 
 src
 node_modules
+
+**/*.backup-*
+
+# Test-only instrumentation is never part of the packaged extension
+test/stage4-*
